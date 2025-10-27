@@ -286,7 +286,7 @@ int main(int argc, char **argv)
 
     // implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
     fprintf(fp,
-            "impl1,%llu,%d,%d,%.9f,%llu,%d,%d,%s,%s,%s,%s\n",
+            "impl1,%llu,%d,%d,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"%s\"\n",
             (unsigned long long)key_true,
             p,
             1,
