@@ -13,7 +13,7 @@ set -o pipefail
 #######################
 # Config global
 #######################
-TEST_MODE=true
+TEST_MODE=false
 
 # Colores para salida
 CLR_RESET="\e[0m"
