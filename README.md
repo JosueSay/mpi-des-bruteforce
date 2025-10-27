@@ -66,7 +66,6 @@ make clean
 ### Ejecución con scripts
 
 Se tienen scripts que soportan **modo automático** (lista de llaves y/o procesos predefinidos) y **modo manual**.
-Por defecto `TEST_MODE=true` (simula). Para ejecutar de verdad, pasa `-t` (lo pone en false).
 
 > Reemplaza `impl1` por `impl2` o `impl3` para las otras implementaciones.
 
@@ -74,10 +73,10 @@ Por defecto `TEST_MODE=true` (simula). Para ejecutar de verdad, pasa `-t` (lo po
 
 ```bash
 # automático (usa KEYS del script)
-./scripts/run_seq.sh -i impl1 -h myhost -m a -t
+./scripts/run_seq.sh -i impl1 -h myhost -m a
 
 # manual (key específica)
-./scripts/run_seq.sh -i impl1 -h myhost -m m -k 123456 -t
+./scripts/run_seq.sh -i impl1 -h myhost -m m -k 123456
 ```
 
 **Qué hace:**
@@ -89,10 +88,10 @@ Por defecto `TEST_MODE=true` (simula). Para ejecutar de verdad, pasa `-t` (lo po
 
 ```bash
 # automático (combina KEYS × P_LIST)
-./scripts/run_par.sh -i impl1 -h myhost -m a -t
+./scripts/run_par.sh -i impl1 -h myhost -m a
 
 # manual (key y procesos específicos)
-./scripts/run_par.sh -i impl1 -h myhost -m m -k 123456 -p 4 -t
+./scripts/run_par.sh -i impl1 -h myhost -m m -k 123456 -p 4
 ```
 
 **Qué hace:**
@@ -135,7 +134,6 @@ implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,t
   - `-m` → modo (`a` automático, `m` manual)
   - `-k` → llave (solo en modo manual)
   - `-p` → número de procesos (solo para versión paralela)
-  - `-t` → toggle TEST_MODE (`true` = simulación, `false` = ejecución real)
 - Ejemplos de uso:
 
   ```bash
