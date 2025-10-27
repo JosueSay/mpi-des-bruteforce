@@ -30,26 +30,28 @@ data/
 Todos los CSV deben seguir estrictamente este formato:
 
 ```csv
-implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname
-naive,123456,1,1,12.345,123456,1,0,2025-10-21T14:32:00Z,mihost
+implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
+naive,123456,1,1,12.345,123456,1,0,2025-10-21T14:32:00Z,mihost,"es una prueba de","Esta es una prueba de proyecto 2"
 ```
 
 ### Descripción de cada columna
 
-| Columna           | Descripción                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
-| `implementation`  | Nombre de la implementación ("naive", "altA", "altB").                                           |
-| `key`             | Llave probada (entera). Para llaves grandes, guardar como número sin comillas.                   |
-| `p`               | Número de procesos usados (entero). Secuencial siempre `1`.                                      |
-| `repetition`      | Índice de repetición para la misma combinación (1,2,3…).                                         |
-| `time_seconds`    | Tiempo total de ejecución en segundos (float).                                                   |
-| `iterations_done` | Número de claves intentadas en esa ejecución.                                                    |
-| `found`           | Indicador si se encontró la llave (1 = sí, 0 = no).                                              |
-| `finder_rank`     | Rank del proceso que encontró la llave (0 si raíz o -1 si no se encontró). Mantener consistente. |
-| `timestamp`       | Instante de inicio o fin en formato ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).                       |
-| `hostname`        | Nombre de la máquina donde se ejecutó.                                                           |
+| Columna           | Descripción                                                                    |
+| ----------------- | ------------------------------------------------------------------------------ |
+| `implementation`  | Nombre de la implementación ("naive", "altA", "altB").                         |
+| `key`             | Llave probada (entera). Para llaves grandes, guardar como número sin comillas. |
+| `p`               | Número de procesos usados (entero). Secuencial siempre `1`.                    |
+| `repetition`      | Índice de repetición para la misma combinación (1,2,3…).                       |
+| `time_seconds`    | Tiempo total de ejecución en segundos (float).                                 |
+| `iterations_done` | Número de claves intentadas en esa ejecución.                                  |
+| `found`           | Indicador si se encontró la llave (1 = sí, 0 = no).                            |
+| `finder_rank`     | Rank del proceso que encontró la llave (0 si raíz o -1 si no se encontró).     |
+| `timestamp`       | Instante de inicio o fin en formato ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`).     |
+| `hostname`        | Nombre de la máquina donde se ejecutó.                                         |
+| `phrase`          | Frase o palabra clave usada para validar el descifrado.                        |
+| `text`            | Texto original (plano o cifrado) procesado durante la ejecución.               |
 
-> Todos los campos son obligatorios; no se dejan libres ni opcionales.
+> Todos los campos son obligatorios; no se dejan vacíos ni opcionales.
 
 ## 3. Variables y métricas para el reporte
 

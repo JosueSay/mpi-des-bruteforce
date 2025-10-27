@@ -116,7 +116,7 @@ echo "texto de prueba para des" | build/bin/impl1 "frase a buscar" 123456 1 "dat
 Encabezado (secuencial y paralelo):
 
 ```csv
-implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname
+implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
 ```
 
 - secuencial escribe en `data/impl1/sec.csv`
@@ -143,4 +143,4 @@ implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,t
 
 - Explicación de los resultados y CSV generado:
 
-  - Campos: `implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname`
+  - Campos: `implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text`

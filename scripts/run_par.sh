@@ -157,14 +157,15 @@ run_one() {
   echo -e "\t${CLR_BOLD}csv:${CLR_RESET} ${CSV_PAR} ${CLR_BOLD}host:${CLR_RESET} ${HOST} ${CLR_BOLD}time:${CLR_RESET} ${timestamp}"
 
   if [[ "${TEST_MODE}" == true ]]; then
-    echo -e "\t${CLR_YELLOW}TEST_MODE=true -> Simulando ejecución:${CLR_RESET}"
-    echo -e "\t\techo pendiente  # comando: echo \"${TEXTO}\" | mpirun -np ${p} ${BIN_PATH} \"${FRASE}\" ${key} ${p} \"${CSV_PAR}\" \"${HOST}\"\n"
+    echo -e "\t${CLR_YELLOW}Simulando ejecución (TEST_MODE=true):${CLR_RESET}"
+    echo -e "\t\t${CLR_BOLD}printf '%s' \"\$TEXTO\" | mpirun -np ${p} ${BIN_PATH} \"${FRASE}\" ${key} ${p} \"${CSV_PAR}\" \"${HOST}\"${CLR_RESET}\n"
   else
     echo -e "\t${CLR_GREEN}Ejecutando comando real...${CLR_RESET}"
-    echo -e "\t\t${BIN_PATH} con contenido del texto y ${p} procesos"
-    echo "${TEXTO}" | mpirun -np ${p} ${BIN_PATH} "${FRASE}" ${key} ${p} "${CSV_PAR}" "${HOST}"
+    echo -e "\t\tComando real: printf '%s' \"\$TEXTO\" | mpirun -np ${p} ${BIN_PATH} \"${FRASE}\" ${key} ${p} \"${CSV_PAR}\" \"${HOST}\""
+    printf '%s' "${TEXTO}" | mpirun -np "${p}" "${BIN_PATH}" "${FRASE}" ${key} "${p}" "${CSV_PAR}" "${HOST}"
     echo -e "\n"
   fi
+
 }
 
 #######################

@@ -13,7 +13,7 @@ set -o pipefail
 #######################
 # Config global
 #######################
-TEST_MODE=false
+TEST_MODE=true
 
 # Colores para salida
 CLR_RESET="\e[0m"
@@ -157,14 +157,16 @@ run_one() {
 
   # Enviar contenido directamente al binario
   if [[ "${TEST_MODE}" == true ]]; then
-    echo -e "\t${CLR_YELLOW}TEST_MODE=true -> Simulando ejecución:${CLR_RESET}"
-    echo -e "\t\techo pendiente  # comando: echo \"${TEXTO}\" | ${BIN_PATH} \"${FRASE}\" ${key} 1 \"${CSV_SEC}\" \"${HOST}\"\n"
+    echo -e "\t${CLR_YELLOW}Simulando ejecución (TEST_MODE=true):${CLR_RESET}"
+    echo -e "\t\t${CLR_BOLD}printf '%s' \"${TEXTO}\" | ${BIN_PATH} \"${FRASE}\" ${key} 1 \"${CSV_SEC}\" \"${HOST}\"${CLR_RESET}\n"
   else
     echo -e "\t${CLR_GREEN}Ejecutando comando real...${CLR_RESET}"
-    echo -e "\t\t${BIN_PATH} con contenido del texto"
-    echo "${TEXTO}" | ${BIN_PATH} "${FRASE}" ${key} 1 "${CSV_SEC}" "${HOST}"
+    echo -e "\t\tComando real: printf '%s' \"${TEXTO}\" | ${BIN_PATH} \"${FRASE}\" ${key} 1 \"${CSV_SEC}\" \"${HOST}\""
+    # Ejecutar
+    printf '%s' "${TEXTO}" | "${BIN_PATH}" "${FRASE}" ${key} 1 "${CSV_SEC}" "${HOST}"
     echo -e "\n"
   fi
+
 }
 
 #######################
