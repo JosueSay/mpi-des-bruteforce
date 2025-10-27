@@ -13,7 +13,8 @@
 #endif
 
 // header csv (secuencial/par comparten)
-static const char *CSV_HEADER = "implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname";
+static const char *CSV_HEADER =
+    "implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text";
 
 // leer stdin completo
 static unsigned char *readAllStdin(size_t *out_len)
@@ -277,8 +278,15 @@ int main(int argc, char **argv)
     ensureHeader(fp, CSV_HEADER);
     char ts[32];
     isoUtcNow(ts, sizeof ts);
-    // implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname
-    fprintf(fp, "impl1,%llu,%d,%d,%.9f,%llu,%d,%d,%s,%s\n",
+
+    // convertir texto leído a C-string
+    char *plain_c = (char *)xmalloc(plain_len + 1);
+    memcpy(plain_c, plain, plain_len);
+    plain_c[plain_len] = '\0';
+
+    // implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
+    fprintf(fp,
+            "impl1,%llu,%d,%d,%.9f,%llu,%d,%d,%s,%s,%s,%s\n",
             (unsigned long long)key_true,
             p,
             1,
@@ -287,7 +295,11 @@ int main(int argc, char **argv)
             found,
             0, // finder_rank en secuencial
             ts,
-            hostname);
+            hostname,
+            frase,
+            plain_c);
+
+    free(plain_c);
     fclose(fp);
   }
 

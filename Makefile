@@ -55,7 +55,9 @@ else
 endif
 
 CFLAGS_SEQ := $(CSTD) $(WARN) $(OPT) $(DEFS) $(INCS) $(DEPFLAGS)
-CFLAGS_PAR := $(CFLAGS_SEQ)     # si tu código MPI requiere extras, agrégalos aquí
+CFLAGS_PAR := $(CFLAGS_SEQ)
+CFLAGS_SEQ += -Wno-deprecated-declarations
+CFLAGS_PAR += -Wno-deprecated-declarations
 LDLIBS_SEQ := $(LDL_CRYPTO)
 LDLIBS_PAR := $(LDL_CRYPTO)
 
