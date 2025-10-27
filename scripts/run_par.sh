@@ -52,12 +52,14 @@ P_LIST=( 2 4 8 )   # número de procesos paralelos, ajustable
 #######################
 usage() {
   cat <<EOF
-Usage: $0 -i <impl1|impl2|impl3> -h <host_name> -m <a|m> [ -k <key> -p <p> ]
+Usage: $0 -i <impl1|impl2|impl3> -h <host_name> -m <a|m> [ -k <key> -p <p> -f "<frase>" -x "<texto>" ]
   -i impl     Implementation id: impl1, impl2 or impl3
   -h host     Hostname
   -m mode     Mode: 'a' = automatic (itera sobre keys × P_LIST), 'm' = manual (proporciona key y p)
   -k key      (modo manual) la key a probar (integer)
   -p p        (modo manual) número de procesos
+  -f frase    (modo manual) frase de búsqueda a usar (string)
+  -x texto    (modo manual) texto a enviar por stdin (string)
   -t          Toggle TEST_MODE a false (ejecuta binarios reales)
   -?          Mostrar ayuda
 EOF
@@ -72,13 +74,17 @@ HOST=""
 MODE=""
 MANUAL_KEY=""
 MANUAL_P=""
-while getopts "i:h:m:k:p:t?" opt; do
+MANUAL_PHRASE=""
+MANUAL_TEXT=""
+while getopts "i:h:m:k:p:f:x:t?" opt; do
   case "${opt}" in
     i) IMPL="${OPTARG}" ;;
     h) HOST="${OPTARG}" ;;
     m) MODE="${OPTARG}" ;;
     k) MANUAL_KEY="${OPTARG}" ;;
     p) MANUAL_P="${OPTARG}" ;;
+    f) MANUAL_PHRASE="${OPTARG}" ;;
+    x) MANUAL_TEXT="${OPTARG}" ;;
     t) TEST_MODE=false ;;
     ?) usage ;;
   esac
@@ -93,24 +99,31 @@ if [[ "${MODE}" != "a" && "${MODE}" != "m" ]]; then
   echo -e "${CLR_RED}Error: mode inválido. Use 'a' o 'm'.${CLR_RESET}"
   usage
 fi
-if [[ "${MODE}" == "m" && ( -z "${MANUAL_KEY}" || -z "${MANUAL_P}" ) ]]; then
-  echo -e "${CLR_RED}Error: modo manual requiere -k <key> y -p <p>.${CLR_RESET}"
+if [[ "${MODE}" == "m" && ( -z "${MANUAL_KEY}" || -z "${MANUAL_P}" || -z "${MANUAL_PHRASE}" || -z "${MANUAL_TEXT}" ) ]]; then
+  echo -e "${CLR_RED}Error: modo manual requiere -k <key>, -p <p>, -f \"<frase>\" y -x \"<texto>\".${CLR_RESET}"
   usage
 fi
 
-# Verificar inputs
-if [[ ! -f "${FILE_TEXTO}" ]]; then
-  echo -e "${CLR_RED}Error: no existe ${FILE_TEXTO}.${CLR_RESET}"
-  exit 2
-fi
-if [[ ! -f "${FILE_FRASE}" ]]; then
-  echo -e "${CLR_RED}Error: no existe ${FILE_FRASE}.${CLR_RESET}"
-  exit 2
+# Verificar inputs (solo en modo automático se requieren archivos)
+if [[ "${MODE}" == "a" ]]; then
+  if [[ ! -f "${FILE_TEXTO}" ]]; then
+    echo -e "${CLR_RED}Error: no existe ${FILE_TEXTO}.${CLR_RESET}"
+    exit 2
+  fi
+  if [[ ! -f "${FILE_FRASE}" ]]; then
+    echo -e "${CLR_RED}Error: no existe ${FILE_FRASE}.${CLR_RESET}"
+    exit 2
+  fi
 fi
 
-# Leer contenido de inputs
-FRASE=$(tr -d '\r' < "${FILE_FRASE}" | sed -n '1p')
-TEXTO=$(tr -d '\r' < "${FILE_TEXTO}")
+# Leer contenido de inputs / o usar manual
+if [[ "${MODE}" == "a" ]]; then
+  FRASE=$(tr -d '\r' < "${FILE_FRASE}" | sed -n '1p')
+  TEXTO=$(tr -d '\r' < "${FILE_TEXTO}")
+else
+  FRASE="${MANUAL_PHRASE}"
+  TEXTO="${MANUAL_TEXT}"
+fi
 
 # Seleccionar paths según impl
 case "${IMPL}" in
@@ -141,8 +154,8 @@ echo -e "\tTEST_MODE:\t${CLR_YELLOW}${TEST_MODE}${CLR_RESET}"
 echo -e "\tBinario:\t${CLR_YELLOW}${BIN_PATH}${CLR_RESET}"
 echo -e "\tCSV paralelo:\t${CLR_YELLOW}${CSV_PAR}${CLR_RESET}"
 echo -e "\tArchivo frase:\t${CLR_YELLOW}${FILE_FRASE}${CLR_RESET}"
-echo -e "\tFrase:\t\t${CLR_YELLOW}${FRASE}${CLR_RESET}"
-echo -e "\tTexto:\t\t${CLR_YELLOW}${TEXTO}${CLR_RESET}\n"
+echo -e "\tFrase (efectiva):\t${CLR_YELLOW}${FRASE}${CLR_RESET}"
+echo -e "\tTexto (efectivo):\t${CLR_YELLOW}${TEXTO}${CLR_RESET}\n"
 
 #######################
 # Función de ejecución paralela
@@ -159,6 +172,7 @@ run_one() {
   if [[ "${TEST_MODE}" == true ]]; then
     echo -e "\t${CLR_YELLOW}Simulando ejecución (TEST_MODE=true):${CLR_RESET}"
     echo -e "\t\t${CLR_BOLD}printf '%s' \"\$TEXTO\" | mpirun -np ${p} ${BIN_PATH} \"${FRASE}\" ${key} ${p} \"${CSV_PAR}\" \"${HOST}\"${CLR_RESET}\n"
+    echo pendiente
   else
     echo -e "\t${CLR_GREEN}Ejecutando comando real...${CLR_RESET}"
     echo -e "\t\tComando real: printf '%s' \"\$TEXTO\" | mpirun -np ${p} ${BIN_PATH} \"${FRASE}\" ${key} ${p} \"${CSV_PAR}\" \"${HOST}\""

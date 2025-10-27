@@ -55,11 +55,13 @@ KEYS=( \
 #######################
 usage() {
   cat <<EOF
-Usage: $0 -i <impl1|impl2|impl3> -h <host_name> -m <a|m> [ -k <key> ]
+Usage: $0 -i <impl1|impl2|impl3> -h <host_name> -m <a|m> [ -k <key> -f "<frase>" -x "<texto>" ]
   -i impl     Implementation id: impl1, impl2 or impl3
   -h host     Hostname (identificador de la máquina que ejecuta)
   -m mode     Mode: 'a' = automatic (itera sobre keys), 'm' = manual (proporciona key)
   -k key      (modo manual) la key a probar (integer)
+  -f frase    (modo manual) frase de búsqueda a usar (string)
+  -x texto    (modo manual) texto a enviar por stdin (string)
   -t          Toggle TEST_MODE a false (ejecuta binarios reales)
   -?          Mostrar ayuda
 EOF
@@ -73,12 +75,16 @@ IMPL=""
 HOST=""
 MODE=""
 MANUAL_KEY=""
-while getopts "i:h:m:k:t?" opt; do
+MANUAL_PHRASE=""
+MANUAL_TEXT=""
+while getopts "i:h:m:k:f:x:t?" opt; do
   case "${opt}" in
     i) IMPL="${OPTARG}" ;;
     h) HOST="${OPTARG}" ;;
     m) MODE="${OPTARG}" ;;
     k) MANUAL_KEY="${OPTARG}" ;;
+    f) MANUAL_PHRASE="${OPTARG}" ;;
+    x) MANUAL_TEXT="${OPTARG}" ;;
     t) TEST_MODE=false ;;
     ?) usage ;;
   esac
@@ -93,24 +99,31 @@ if [[ "${MODE}" != "a" && "${MODE}" != "m" ]]; then
   echo -e "${CLR_RED}Error: mode inválido. Use 'a' o 'm'.${CLR_RESET}"
   usage
 fi
-if [[ "${MODE}" == "m" && -z "${MANUAL_KEY}" ]]; then
-  echo -e "${CLR_RED}Error: modo manual requiere -k <key>.${CLR_RESET}"
+if [[ "${MODE}" == "m" && ( -z "${MANUAL_KEY}" || -z "${MANUAL_PHRASE}" || -z "${MANUAL_TEXT}" ) ]]; then
+  echo -e "${CLR_RED}Error: modo manual requiere -k <key>, -f \"<frase>\" y -x \"<texto>\".${CLR_RESET}"
   usage
 fi
 
 # Verificar inputs
-if [[ ! -f "${FILE_TEXTO}" ]]; then
-  echo -e "${CLR_RED}Error: no existe ${FILE_TEXTO}.${CLR_RESET}"
-  exit 2
-fi
-if [[ ! -f "${FILE_FRASE}" ]]; then
-  echo -e "${CLR_RED}Error: no existe ${FILE_FRASE}.${CLR_RESET}"
-  exit 2
+if [[ "${MODE}" == "a" ]]; then
+  if [[ ! -f "${FILE_TEXTO}" ]]; then
+    echo -e "${CLR_RED}Error: no existe ${FILE_TEXTO}.${CLR_RESET}"
+    exit 2
+  fi
+  if [[ ! -f "${FILE_FRASE}" ]]; then
+    echo -e "${CLR_RED}Error: no existe ${FILE_FRASE}.${CLR_RESET}"
+    exit 2
+  fi
 fi
 
 # Leer contenido de inputs
-FRASE=$(tr -d '\r' < "${FILE_FRASE}" | sed -n '1p')
-TEXTO=$(tr -d '\r' < "${FILE_TEXTO}")
+if [[ "${MODE}" == "a" ]]; then
+  FRASE=$(tr -d '\r' < "${FILE_FRASE}" | sed -n '1p')
+  TEXTO=$(tr -d '\r' < "${FILE_TEXTO}")
+else
+  FRASE="${MANUAL_PHRASE}"
+  TEXTO="${MANUAL_TEXT}"
+fi
 
 # Seleccionar paths según impl
 case "${IMPL}" in
@@ -158,10 +171,10 @@ run_one() {
   # Enviar contenido directamente al binario
   if [[ "${TEST_MODE}" == true ]]; then
     echo -e "\t${CLR_YELLOW}Simulando ejecución (TEST_MODE=true):${CLR_RESET}"
-    echo -e "\t\t${CLR_BOLD}printf '%s' \"${TEXTO}\" | ${BIN_PATH} \"${FRASE}\" ${key} 1 \"${CSV_SEC}\" \"${HOST}\"${CLR_RESET}\n"
+    echo -e "\t\t${CLR_BOLD}printf '%s' \"\$TEXTO\" | ${BIN_PATH} \"${FRASE}\" ${key} 1 \"${CSV_SEC}\" \"${HOST}\"${CLR_RESET}\n"
   else
     echo -e "\t${CLR_GREEN}Ejecutando comando real...${CLR_RESET}"
-    echo -e "\t\tComando real: printf '%s' \"${TEXTO}\" | ${BIN_PATH} \"${FRASE}\" ${key} 1 \"${CSV_SEC}\" \"${HOST}\""
+    echo -e "\t\tComando real: printf '%s' \"\$TEXTO\" | ${BIN_PATH} \"${FRASE}\" ${key} 1 \"${CSV_SEC}\" \"${HOST}\""
     # Ejecutar
     printf '%s' "${TEXTO}" | "${BIN_PATH}" "${FRASE}" ${key} 1 "${CSV_SEC}" "${HOST}"
     echo -e "\n"
