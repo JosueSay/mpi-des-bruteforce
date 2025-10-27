@@ -8,48 +8,27 @@ Descripcion
 
 ## 📦 Requisitos e Instalación
 
-### Instalación (Ubuntu 22.04 / WSL)
+**(Ubuntu 22.04 / WSL):**
 
 ```bash
-# 1) actualizar sistema
 sudo apt update
-
-# 2) toolchain básico (incluye gcc y make)
-sudo apt install -y build-essential pkg-config
-
-# 3) crypto para DES real (OpenSSL)
-sudo apt install -y libssl-dev openssl
-
-# 4) mpi para la versión paralela
-sudo apt install -y openmpi-bin libopenmpi-dev
-
-# 5) utilidades
-sudo apt install -y dos2unix
-
-# 6) verificar versiones
+sudo apt install -y build-essential pkg-config libssl-dev openssl openmpi-bin libopenmpi-dev dos2unix
+dos2unix scripts/*.sh
+chmod +x scripts/*.sh
 gcc -v
 lsb_release -a
 ```
 
-Normaliza finales de línea y permisos de scripts:
+## ⚙️ Compilación
 
 ```bash
-dos2unix scripts/*.sh
-chmod +x scripts/*.sh
-```
-
-### Compilación
-
-Por defecto, los artefactos van a `build/bin` (ejecutables) y `build/obj` (objetos).
-
-```bash
-# sólo secuenciales (impl1/impl2/impl3)
+# todas las secuenciales
 make all-seq USE_OPENSSL=1
 
-# sólo paralelos (impl1/impl2/impl3) — requiere OpenMPI
+# todas las paralelas (MPI)
 make all-par USE_OPENSSL=1
 
-# uno específico
+# una específica
 make impl1-seq USE_OPENSSL=1
 make impl1-par USE_OPENSSL=1
 
@@ -57,90 +36,81 @@ make impl1-par USE_OPENSSL=1
 make clean
 ```
 
-**Se generan:**
+Genera `build/bin/impl1`, `build/bin/impl2`, `build/bin/impl3`.
 
-- `build/bin/impl1`
-- `build/bin/impl2`
-- `build/bin/impl3`
+## 🚀 Ejecución con scripts
 
-### Ejecución con scripts
+Los scripts soportan **automático** (usa archivos `inputs/`) y **manual** (recibe parámetros explícitos).
 
-Se tienen scripts que soportan **modo automático** (lista de llaves y/o procesos predefinidos) y **modo manual**.
+Parámetros comunes de los scripts:
 
-> Reemplaza `impl1` por `impl2` o `impl3` para las otras implementaciones.
+- `-i` → implementación (`impl1`|`impl2`|`impl3`)
+- `-h` → hostname
+- `-m` → modo `a` (auto) / `m` (manual)
+- `-k` → llave (manual)
+- `-p` → procesos (solo run_par)
+- `-f` → frase (manual)
+- `-x` → texto (manual)
+- `-?` → ayuda
 
-#### Secuencial
+> Los scripts leen por defecto `inputs/texto_entrada.txt` y `inputs/frase_busqueda.txt` en modo automático.
+
+### Secuencial
+
+**Automático:**
 
 ```bash
-# automático (usa KEYS del script)
 ./scripts/run_seq.sh -i impl1 -h myhost -m a
+```
 
-# manual (key específica)
+**Manual (key OR key+frase+texto):**
+
+```bash
+# mínimo: llave
 ./scripts/run_seq.sh -i impl1 -h myhost -m m -k 123456
+
+# con frase y texto explícitos
+./scripts/run_seq.sh -i impl1 -h myhost -m m -k 123456 -f "es una prueba de" -x "Esta es una prueba de proyecto 2"
 ```
 
-**Qué hace:**
-
-- Lee `inputs/texto_entrada.txt` (stdin para el binario) y `inputs/frase_busqueda.txt`.
-- Ejecuta `build/bin/impl1` (secuencial) y apendea resultados en `data/impl1/sec.csv`.
-
-#### Paralelo
+**Ayuda:**
 
 ```bash
-# automático (combina KEYS × P_LIST)
+./scripts/run_seq.sh -?
+```
+
+### Paralelo (MPI)
+
+**Automático:**
+
+```bash
 ./scripts/run_par.sh -i impl1 -h myhost -m a
+```
 
-# manual (key y procesos específicos)
+**Manual:**
+
+```bash
+# mínimo: llave y procesos
 ./scripts/run_par.sh -i impl1 -h myhost -m m -k 123456 -p 4
+
+# con frase y texto explícitos
+./scripts/run_par.sh -i impl1 -h myhost -m m -k 123456 -p 4 \
+  -f "es una prueba de" -x "Esta es una prueba de proyecto 2"
 ```
 
-**Qué hace:**
-
-- usa `mpirun -np <p> build/bin/impl1` y apendea en `data/impl1/par.csv`.
-
-### Ejecución directa (sin scripts)
+**Ayuda:**
 
 ```bash
-# ejemplo secuencial (impl1)
-echo "texto de prueba para des" | build/bin/impl1 "frase a buscar" 123456 1 "data/impl1/sec.csv" "myhost"
+./scripts/run_par.sh -?
 ```
 
-**argumentos del binario (stdin → texto):**
+## 📊 Salida (CSV)
 
-```bash
-<frase> <key_upper_bound> <p> <ruta_csv> <hostname>
-```
-
-### Salida de resultados (CSV)
-
-Encabezado (secuencial y paralelo):
+Encabezado (ambos):
 
 ```csv
 implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
 ```
 
-- secuencial escribe en `data/impl1/sec.csv`
-- paralelo escribe en `data/impl1/par.csv`
-
-## ⚙️ Compilación y ejecución
-
-- Cómo compilar los binarios (`make` o comando `gcc/mpicc`).
-- Scripts de ejecución disponibles:
-  - `run_seq.sh` → versión secuencial
-  - `run_par.sh` → versión paralela
-- Parámetros que aceptan los scripts:
-  - `-i` → implementación (`impl1`, `impl2`, `impl3`)
-  - `-h` → host (nombre de la máquina)
-  - `-m` → modo (`a` automático, `m` manual)
-  - `-k` → llave (solo en modo manual)
-  - `-p` → número de procesos (solo para versión paralela)
-- Ejemplos de uso:
-
-  ```bash
-  ./scripts/run_seq.sh -i impl1 -h myhost -m a
-  ./scripts/run_par.sh -i impl1 -h myhost -m m -k 123456 -p 4
-  ```
-
-- Explicación de los resultados y CSV generado:
-
-  - Campos: `implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text`
+- Secuencial → `data/impl1/sec.csv`
+- Paralelo → `data/impl1/par.csv`
