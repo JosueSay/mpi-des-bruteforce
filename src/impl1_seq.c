@@ -19,7 +19,7 @@ static void ensureDir(const char *path)
   mkdir(path, 0775);
 }
 
-// separa base y extensión simple
+// separa base
 static void splitExt(const char *path, char *base, size_t nbase, char *ext, size_t next)
 {
   const char *dot = strrchr(path, '.');
