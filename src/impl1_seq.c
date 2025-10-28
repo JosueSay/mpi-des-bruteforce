@@ -3,307 +3,349 @@
 #include <string.h>
 #include <stdint.h>
 #include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-#include "../include/common.h"
-#include "../include/impl1.h"
+#include "common.h"
+#include "impl1.h"
 
-// define USE_OPENSSL y enlaza -lcrypto para usar DES real
-#ifdef USE_OPENSSL
-#include <openssl/des.h>
-#endif
-
-// header csv (secuencial/par comparten)
-static const char *CSV_HEADER =
-    "implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text";
-
-// leer stdin completo
-static unsigned char *readAllStdin(size_t *out_len)
+// crea directorio si no existe
+static void ensureDir(const char *path)
 {
-  size_t cap = 4096, len = 0;
-  unsigned char *buf = (unsigned char *)malloc(cap);
-  if (!buf)
-    return NULL;
-  for (;;)
+  struct stat st;
+  if (stat(path, &st) == 0)
+    return;
+  mkdir(path, 0775);
+}
+
+// separa base y extensión simple
+static void splitExt(const char *path, char *base, size_t nbase, char *ext, size_t next)
+{
+  const char *dot = strrchr(path, '.');
+  if (!dot || dot == path)
   {
-    size_t n = fread(buf + len, 1, cap - len, stdin);
-    len += n;
-    if (n == 0)
-      break;
-    if (len == cap)
-    {
-      cap *= 2;
-      unsigned char *t = (unsigned char *)realloc(buf, cap);
-      if (!t)
-      {
-        free(buf);
-        return NULL;
-      }
-      buf = t;
-    }
+    snprintf(base, nbase, "%s", path);
+    ext[0] = '\0';
   }
-  *out_len = len;
-  return buf;
-}
-
-static void *xmalloc(size_t n)
-{
-  void *p = malloc(n);
-  if (!p)
+  else
   {
-    fprintf(stderr, "oom\n");
-    exit(1);
+    size_t blen = (size_t)(dot - path);
+    if (blen >= nbase)
+      blen = nbase - 1;
+    memcpy(base, path, blen);
+    base[blen] = '\0';
+    snprintf(ext, next, "%s", dot + 1);
   }
-  return p;
 }
 
-// convierte key de 56 bits (uint64_t) a DES_cblock con paridad impar
-#ifdef USE_OPENSSL
-static void makeKeyFrom56(uint64_t key56, DES_cblock *k)
+// comprueba existencia
+static int pathExists(const char *path)
 {
-  memset(k, 0, sizeof(DES_cblock));
-  for (int i = 0; i < 8; ++i)
+  struct stat st;
+  return stat(path, &st) == 0;
+}
+
+// genera ruta única si ya existe
+static void uniquePath(char *dst, size_t ndst, const char *suggested)
+{
+  if (!pathExists(suggested))
   {
-    uint8_t seven = (uint8_t)((key56 >> (56 - 7 * (i + 1))) & 0x7Fu);
-    (*k)[i] = (unsigned char)(seven << 1); // deja bit de paridad en LSB
+    snprintf(dst, ndst, "%s", suggested);
+    return;
   }
-  DES_set_odd_parity(k);
-}
-#endif
-
-// padding pkcs7-like a múltiplos de 8
-static unsigned char *padBlock8(const unsigned char *in, size_t len, size_t *out_len)
-{
-  size_t pad = 8 - (len % 8);
-  if (pad == 0)
-    pad = 8;
-  *out_len = len + pad;
-  unsigned char *out = (unsigned char *)xmalloc(*out_len);
-  memcpy(out, in, len);
-  memset(out + len, (int)pad, pad);
-  return out;
-}
-
-static unsigned char *unpadBlock8(const unsigned char *in, size_t len, size_t *out_len)
-{
-  if (len == 0)
+  char base[512], ext[128];
+  splitExt(suggested, base, sizeof base, ext, sizeof ext);
+  char ts[32];
+  isoUtcNow(ts, sizeof ts);
+  for (int i = 1; i < 10000; ++i)
   {
-    *out_len = 0;
-    return NULL;
+    if (ext[0] != '\0')
+      snprintf(dst, ndst, "%s_%s_%d.%s", base, ts, i, ext);
+    else
+      snprintf(dst, ndst, "%s_%s_%d", base, ts, i);
+    if (!pathExists(dst))
+      return;
   }
-  unsigned char pad = in[len - 1];
-  size_t cut = (pad >= 1 && pad <= 8 && pad <= len) ? (len - pad) : len;
-  unsigned char *out = (unsigned char *)xmalloc(cut ? cut : 1);
-  if (cut)
-    memcpy(out, in, cut);
-  *out_len = cut;
-  return out;
+  snprintf(dst, ndst, "%s", suggested);
 }
 
-// cifrado
-int encryptDesEcb(uint64_t key56, const unsigned char *in, size_t len,
-                  unsigned char **out, size_t *out_len)
+// encripta archivo a salida, evitando sobrescribir
+int impl1EncryptFile(uint64_t key56, const char *in_path, const char *out_path)
 {
-#ifdef USE_OPENSSL
-  size_t p_len;
-  unsigned char *p = padBlock8(in, len, &p_len);
-  *out = (unsigned char *)xmalloc(p_len);
-  *out_len = p_len;
-
-  DES_cblock k;
-  makeKeyFrom56(key56, &k);
-  DES_key_schedule ks;
-  DES_set_key_unchecked(&k, &ks);
-
-  for (size_t i = 0; i < p_len; i += 8)
-  {
-    DES_cblock ib, ob;
-    memcpy(ib, p + i, 8);
-    DES_ecb_encrypt(&ib, &ob, &ks, DES_ENCRYPT);
-    memcpy(*out + i, ob, 8);
-  }
-  free(p);
-  return 0;
-#else
-  // fallback xor (solo testing)
-  size_t p_len;
-  unsigned char *p = padBlock8(in, len, &p_len);
-  *out = (unsigned char *)xmalloc(p_len);
-  *out_len = p_len;
-  unsigned char b = (unsigned char)(key56 & 0xFFu);
-  for (size_t i = 0; i < p_len; ++i)
-    (*out)[i] = p[i] ^ b;
-  free(p);
-  return 0;
-#endif
-}
-
-// descifrado
-int decryptDesEcb(uint64_t key56, const unsigned char *in, size_t len,
-                  unsigned char **out, size_t *out_len)
-{
-#ifdef USE_OPENSSL
-  if (len % 8 != 0)
+  unsigned char *in_buf = NULL, *cipher = NULL;
+  size_t in_len = 0, cipher_len = 0;
+  if (readEntireFile(in_path, &in_buf, &in_len) != 0)
     return -1;
-  unsigned char *tmp = (unsigned char *)xmalloc(len);
-
-  DES_cblock k;
-  makeKeyFrom56(key56, &k);
-  DES_key_schedule ks;
-  DES_set_key_unchecked(&k, &ks);
-
-  for (size_t i = 0; i < len; i += 8)
+  if (encryptDesEcb(key56, in_buf, in_len, &cipher, &cipher_len) != 0)
   {
-    DES_cblock ib, ob;
-    memcpy(ib, in + i, 8);
-    DES_ecb_encrypt(&ib, &ob, &ks, DES_DECRYPT);
-    memcpy(tmp + i, ob, 8);
+    free(in_buf);
+    return -2;
   }
-  unsigned char *unp;
-  size_t unp_len;
-  unp = unpadBlock8(tmp, len, &unp_len);
-  free(tmp);
-  *out = unp;
-  *out_len = unp_len;
-  return 0;
-#else
-  // fallback xor simétrico
-  unsigned char *tmp = (unsigned char *)xmalloc(len);
-  unsigned char b = (unsigned char)(key56 & 0xFFu);
-  for (size_t i = 0; i < len; ++i)
-    tmp[i] = in[i] ^ b;
-  *out = tmp;
-  *out_len = len; // sin unpadding
-  return 0;
-#endif
+  ensureDir("IO/outputs");
+  char final_out[512];
+  if (out_path && out_path[0])
+    uniquePath(final_out, sizeof final_out, out_path);
+  else
+    uniquePath(final_out, sizeof final_out, "IO/outputs/cipher.bin");
+  int rc = writeEntireFile(final_out, cipher, cipher_len);
+  if (rc == 0)
+    printf("archivo cifrado: %s | key=%llu\n", final_out, (unsigned long long)key56);
+  free(cipher);
+  free(in_buf);
+  return rc == 0 ? 0 : -3;
 }
 
-// busca substring
-int containsPhrase(const unsigned char *buf, size_t len, const char *phrase)
+// desencripta archivo a salida, evitando sobrescribir
+int impl1DecryptFile(uint64_t key56, const char *in_path, const char *out_path)
 {
-  if (!phrase || !*phrase)
-    return 0;
-  (void)len;
-  const char *p = (const char *)buf;
-  return strstr(p, phrase) != NULL;
+  unsigned char *in_buf = NULL, *plain = NULL;
+  size_t in_len = 0, plain_len = 0;
+  if (readEntireFile(in_path, &in_buf, &in_len) != 0)
+    return -1;
+  if (decryptDesEcb(key56, in_buf, in_len, &plain, &plain_len) != 0)
+  {
+    free(in_buf);
+    return -2;
+  }
+  ensureDir("IO/outputs");
+  char final_out[512];
+  if (out_path && out_path[0])
+    uniquePath(final_out, sizeof final_out, out_path);
+  else
+    uniquePath(final_out, sizeof final_out, "IO/outputs/dec_output.txt");
+  int rc = writeEntireFile(final_out, plain, plain_len);
+  if (rc == 0)
+    printf("archivo descifrado: %s | key=%llu\n", final_out, (unsigned long long)key56);
+  free(plain);
+  free(in_buf);
+  return rc == 0 ? 0 : -3;
 }
 
-static void printUsage(const char *prog)
+// logging CSV con header garantizado
+int impl1LogCsv(FILE *csv,
+                const char *implementation,
+                run_mode_t mode,
+                uint64_t key,
+                int p,
+                int repetition,
+                double time_seconds,
+                uint64_t iterations_done,
+                int found,
+                int finder_rank,
+                const char *timestamp,
+                const char *hostname,
+                const char *phrase,
+                const char *text,
+                const char *in_path,
+                const char *out_path)
 {
-  fprintf(stderr, "uso: echo \"<texto>\" | %s <frase> <key> <p> <ruta_csv> <hostname>\n", prog);
-  fprintf(stderr, "ejem: echo \"Esta es una prueba\" | %s \"una prueba\" 123456 1 data/impl1/sec.csv myhost\n", prog);
+  if (!csv)
+    return -1;
+  ensureHeader(csv, CSV_HEADER);
+  fprintf(csv,
+          "%s,%d,%llu,%d,%d,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"%s\",\"%s\",\"%s\"\n",
+          implementation ? implementation : "impl1",
+          (int)mode,
+          (unsigned long long)key,
+          p,
+          repetition,
+          time_seconds,
+          (unsigned long long)iterations_done,
+          found,
+          finder_rank,
+          timestamp ? timestamp : "",
+          hostname ? hostname : "",
+          phrase ? phrase : "",
+          text ? text : "",
+          in_path ? in_path : "",
+          out_path ? out_path : "");
+  return 0;
+}
+
+// crack secuencial sobre archivo cifrado
+int impl1CrackFileSeq(const char *cipher_path,
+                      const char *phrase,
+                      uint64_t start_key,
+                      uint64_t end_key,
+                      uint64_t *found_key,
+                      uint64_t *iterations_done,
+                      double *time_seconds)
+{
+  unsigned char *cipher = NULL;
+  size_t cipher_len = 0;
+  if (readEntireFile(cipher_path, &cipher, &cipher_len) != 0)
+    return -1;
+
+  struct timespec t0 = nowMono();
+  uint64_t iters = 0;
+  int ok = 0;
+  uint64_t fkey = 0;
+
+  if (end_key < start_key)
+  {
+    free(cipher);
+    return -2;
+  }
+
+  for (uint64_t k = start_key; k <= end_key; ++k)
+  {
+    unsigned char *dec = NULL;
+    size_t dec_len = 0;
+    if (decryptDesEcb(k, cipher, cipher_len, &dec, &dec_len) == 0)
+    {
+      ++iters;
+      if (containsPhrase(dec, dec_len, phrase))
+      {
+        ok = 1;
+        fkey = k;
+        free(dec);
+        break;
+      }
+    }
+    if (dec)
+      free(dec);
+    if (k == UINT64_MAX)
+      break; // protección overflow
+  }
+
+  struct timespec t1 = nowMono();
+  time_span_t dt = diffMono(t0, t1);
+
+  if (found_key)
+    *found_key = fkey;
+  if (iterations_done)
+    *iterations_done = iters;
+  if (time_seconds)
+    *time_seconds = dt.secs;
+
+  free(cipher);
+  return ok ? 0 : 1;
+}
+
+// parseo simple de flags estilo --k 42, --in file, --out file, --phrase "..."
+static const char *findArg(int argc, char **argv, const char *flag)
+{
+  for (int i = 1; i < argc - 1; ++i)
+    if (strcmp(argv[i], flag) == 0)
+      return argv[i + 1];
+  return NULL;
 }
 
 int main(int argc, char **argv)
 {
-  if (argc < 6)
+  const char *mode = (argc >= 2) ? argv[1] : NULL;
+
+  // encrypt
+  if (mode && strcmp(mode, "--encrypt") == 0)
   {
-    printUsage(argv[0]);
-    return 2;
-  }
-
-  const char *frase = argv[1];
-  uint64_t key_true = strtoull(argv[2], NULL, 10); // llave real y upper bound
-  int p = atoi(argv[3]);                           // en seq será 1
-  const char *csv_path = argv[4];
-  const char *hostname = argv[5];
-
-  // leer texto stdin
-  size_t plain_len = 0;
-  unsigned char *plain = readAllStdin(&plain_len);
-  if (!plain || plain_len == 0)
-  {
-    fprintf(stderr, "stdin vacio\n");
-    return 3;
-  }
-
-  // cifrar con la llave verdadera para obtener el cipher
-  unsigned char *cipher = NULL;
-  size_t cipher_len = 0;
-  if (encryptDesEcb(key_true, plain, plain_len, &cipher, &cipher_len) != 0)
-  {
-    fprintf(stderr, "error en encrypt\n");
-    free(plain);
-    return 4;
-  }
-
-  // medir tiempo
-  struct timespec t0 = nowMono();
-  uint64_t iterations_done = 0;
-  uint64_t found_key = UINT64_MAX;
-  int found = 0;
-
-  // búsqueda 0..key_true (incluyente)
-  for (uint64_t k = 0; k <= key_true; ++k)
-  {
-    unsigned char *dec = NULL;
-    size_t dec_len = 0;
-    if (decryptDesEcb(k, cipher, cipher_len, &dec, &dec_len) != 0)
+    const char *k_str = findArg(argc, argv, "-k");
+    const char *in_path = findArg(argc, argv, "-in");
+    const char *out_path = findArg(argc, argv, "-out");
+    if (!k_str || !in_path)
     {
-      free(dec);
-      continue;
+      fprintf(stderr, "uso: %s --encrypt -k <key> -in <in.txt> [-out <cipher.bin>]\n", argv[0]);
+      return 2;
     }
-    ++iterations_done; // cuenta intento actual
-    if (containsPhrase(dec, dec_len, frase))
+    uint64_t key = strtoull(k_str, NULL, 10);
+    int rc = impl1EncryptFile(key, in_path, out_path);
+    return rc == 0 ? 0 : 1;
+  }
+
+  // decrypt
+  if (mode && strcmp(mode, "--decrypt") == 0)
+  {
+    const char *k_str = findArg(argc, argv, "-k");
+    const char *in_path = findArg(argc, argv, "-in");
+    const char *out_path = findArg(argc, argv, "-out");
+    if (!k_str || !in_path)
     {
-      found = 1;
-      found_key = k;
-      free(dec);
-      break;
+      fprintf(stderr, "uso: %s --decrypt -k <key> -in <cipher.bin> [-out <plain.txt>]\n", argv[0]);
+      return 2;
     }
-    free(dec);
+    uint64_t key = strtoull(k_str, NULL, 10);
+    int rc = impl1DecryptFile(key, in_path, out_path);
+    return rc == 0 ? 0 : 1;
   }
-  struct timespec t1 = nowMono();
-  time_span_t dt = diffMono(t0, t1);
 
-  // stdout info mínima
-  if (found)
+  // crack
+  if (mode && strcmp(mode, "--crack") == 0)
   {
-    fprintf(stdout, "%llu encontrado; tiempo=%.6f s; iters=%llu\n",
-            (unsigned long long)found_key, dt.secs, (unsigned long long)iterations_done);
+    const char *cipher_path = findArg(argc, argv, "-in");
+    const char *phrase = findArg(argc, argv, "-phrase");
+    const char *start_str = findArg(argc, argv, "-start");
+    const char *end_str = findArg(argc, argv, "-end");
+    const char *rep_str = findArg(argc, argv, "-rep");
+    const char *csv_path = findArg(argc, argv, "-csv");
+    const char *host_tag = findArg(argc, argv, "-host");
+
+    if (!cipher_path || !phrase)
+    {
+      fprintf(stderr, "uso: %s --crack -in <cipher.bin> -phrase \"...\" [-start A] [-end B] [-rep N] [-csv path] [-host tag]\n", argv[0]);
+      return 2;
+    }
+
+    uint64_t start_key = start_str ? strtoull(start_str, NULL, 10) : 0ULL;
+    uint64_t end_key = end_str ? strtoull(end_str, NULL, 10) : ((1ULL << 56) - 1ULL);
+    int repetition = rep_str ? atoi(rep_str) : 1;
+    if (repetition < 1)
+      repetition = 1;
+
+    char host_buf[128] = {0};
+    if (!host_tag)
+    {
+      gethostname(host_buf, sizeof host_buf - 1);
+      host_tag = host_buf;
+    }
+
+    for (int r = 1; r <= repetition; ++r)
+    {
+      uint64_t fkey = 0, iters = 0;
+      double secs = 0.0;
+      int rc = impl1CrackFileSeq(cipher_path, phrase, start_key, end_key, &fkey, &iters, &secs);
+
+      if (csv_path)
+      {
+        FILE *csv = fopen(csv_path, "a");
+        if (!csv)
+        {
+          fprintf(stderr, "no pude abrir csv %s: %s\n", csv_path, strerror(errno));
+        }
+        else
+        {
+          char ts[32];
+          isoUtcNow(ts, sizeof ts);
+          impl1LogCsv(csv,
+                      "impl1",
+                      runModeCrackSeq,
+                      fkey,
+                      1,
+                      r,
+                      secs,
+                      iters,
+                      (rc == 0) ? 1 : 0,
+                      0,
+                      ts,
+                      host_tag,
+                      phrase,
+                      "",
+                      cipher_path,
+                      "");
+          fclose(csv);
+        }
+      }
+
+      if (rc == 0)
+        fprintf(stdout, "key=%llu encontrada; tiempo=%.6f s; iters=%llu\n",
+                (unsigned long long)fkey, secs, (unsigned long long)iters);
+      else
+        fprintf(stdout, "no encontrada; tiempo=%.6f s; iters=%llu\n",
+                secs, (unsigned long long)iters);
+    }
+
+    return 0;
   }
-  else
-  {
-    fprintf(stdout, "no encontrado; tiempo=%.6f s; iters=%llu\n",
-            dt.secs, (unsigned long long)iterations_done);
-  }
 
-  // csv append
-  FILE *fp = fopen(csv_path, "a+");
-  if (!fp)
-  {
-    fprintf(stderr, "no pude abrir csv %s: %s\n", csv_path, strerror(errno));
-  }
-  else
-  {
-    ensureHeader(fp, CSV_HEADER);
-    char ts[32];
-    isoUtcNow(ts, sizeof ts);
-
-    // convertir texto leído a C-string
-    char *plain_c = (char *)xmalloc(plain_len + 1);
-    memcpy(plain_c, plain, plain_len);
-    plain_c[plain_len] = '\0';
-
-    // implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
-    fprintf(fp,
-            "impl1,%llu,%d,%d,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"%s\"\n",
-            (unsigned long long)key_true,
-            p,
-            1,
-            dt.secs,
-            (unsigned long long)iterations_done,
-            found,
-            0, // finder_rank en secuencial
-            ts,
-            hostname,
-            frase,
-            plain_c);
-
-    free(plain_c);
-    fclose(fp);
-  }
-
-  free(plain);
-  free(cipher);
-  return 0;
+  fprintf(stderr, "modos: --encrypt | --decrypt | --crack\n");
+  return 2;
 }
