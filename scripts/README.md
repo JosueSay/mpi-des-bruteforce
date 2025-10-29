@@ -1,169 +1,125 @@
 # Configuración de Entradas y Scripts
 
-Este documento describe los **parámetros de entrada que todas las implementaciones del proyecto deben recibir y ejecución de scripts**.
+Este documento describe los **parámetros de entrada** que deben recibir las implementaciones y **cómo ejecutar los scripts** provistos.
 
 ## Ubicación de los archivos de entrada
 
-Los archivos de entrada se encuentran en la carpeta `IO/inputs/`:
+Los archivos están en `IO/inputs/`:
 
 ```bash
 IO/inputs/
-├── texto_entrada.txt       # Contiene el texto cifrado que se desea descifrar
-└── frase_busqueda.txt      # Contiene la palabra o frase clave a buscar en el texto descifrado
+├── texto_entrada.txt       # Texto en claro usado para cifrar / referencia para pruebas
+└── frase_busqueda.txt      # Palabra o frase clave (una línea) para validar descifrado
 ```
+
+El binario/los scripts usan `IO/outputs/` para los `.bin` generados/consumidos.
 
 ## Parámetros de entrada
 
-### 1. Texto de entrada (`texto_entrada.txt`)
+1. **Texto de entrada (`texto_entrada.txt`)**
 
-* **Descripción:** Texto cifrado que el programa intentará descifrar usando fuerza bruta.
-* **Ubicación:** `IO/inputs/texto_entrada.txt`
-* **Tipo:** Archivo de texto plano (`.txt`)
-* **Valor fijo:** Sí. Este archivo debe mantenerse igual para todas las pruebas obligatorias.
-* **Uso:** Cargado por el programa al iniciar; todas las implementaciones usan el mismo texto.
+   - Descripción: texto plano que se cifra para generar `.bin` (o se usa como stdin).
+   - Ruta: `IO/inputs/texto_entrada.txt`.
+   - Uso: leído por los scripts si no se pasa `-x` ni stdin.
 
-### 2. Palabra o frase clave (`frase_busqueda.txt`)
+2. **Palabra / frase clave (`frase_busqueda.txt`)**
 
-* **Descripción:** Substring que debe aparecer en el texto descifrado si se encuentra la llave correcta.
-* **Ubicación:** `IO/inputs/frase_busqueda.txt`
-* **Tipo:** Archivo de texto plano (`.txt`)
-* **Valor fijo:** Sí. No debe cambiar entre ejecuciones.
-* **Uso:** Permite validar que el descifrado fue exitoso (por ejemplo, usando `strstr` o función equivalente).
+   - Descripción: substring esperado en el texto descifrado para confirmar la llave.
+   - Ruta: `IO/inputs/frase_busqueda.txt` (primera línea).
+   - Uso: pasado como argumento al binario si no se indica `-f`.
 
-### 3. Llave objetivo
+3. **Llave objetivo / key_upper**
 
-* **Descripción:** La llave privada utilizada para cifrar el texto o el rango de llaves a explorar.
-* **Ubicación:** Definida en el script de ejecución (`.sh`) o como parámetro al ejecutar el programa.
-* **Tipo:** Número entero grande (por ejemplo, `123456` o llaves “fácil”, “media”, “difícil”).
-* **Valor fijo:** No. Cambia entre pruebas para evaluar performance y speedup.
-* **Uso:** Cada ejecución probará distintas llaves o rangos de llaves según la estrategia definida.
+   - Descripción: llave real (para `encrypt`) o límite superior de búsqueda (para `decrypt`).
+   - Paso: `-k` (encrypt) o `-K` (decrypt) en los scripts.
+   - Valor: entero decimal (ej. `123456`, `18014398509481983`, `18014398509481984`).
 
-### 4. Número de procesos (`p`)
+4. **Número de procesos (`p`)**
 
-* **Descripción:** Cantidad de procesos paralelos a utilizar en la ejecución (solo aplica para versiones paralelas).
-* **Ubicación:** Definido en el script de ejecución (`mpirun -np p`).
-* **Tipo:** Entero positivo (`1, 2, 4, 8, ...`)
-* **Valor fijo:** No. Puede variar para estudiar escalabilidad y eficiencia.
-* **Uso:** Divide el espacio de búsqueda entre procesos; controlado por `mpirun` en la ejecución paralela.
+   - Descripción: número de procesos MPI.
+   - Ejecución: `mpirun -np <p>` dentro de los scripts paralelos (`des_par.sh`, `encr_par.sh`).
+   - Nota: en paralelo `p` controla la partición del espacio; en secuencial `p=1`.
 
-## Instrucciones de uso de los scripts (`run_seq.sh` y `run_par.sh`)
+## Interfaz general de los binarios
 
-A continuación se documenta **qué hace cada script**, **qué parámetros recibe** y **los comandos válidos** para ejecutarlos.
+- `stdin` : texto completo (cuando aplica).
+- `argv[1]` : frase (decrypt) o (encrypt) key (según modo).
+- `argv[2]` : key / key_upper.
+- `argv[3]` : p (en secuencial se pasa `1`; en paralelo se pasa `p`).
+- `argv[4]` : ruta al CSV de salida.
+- `argv[5]` : hostname lógico para registrar.
+- (par) `argv[6]` : input `.bin` (para decrypt).
 
-### `run_seq.sh` — ejecución **secuencial** (por clave)
+> Los scripts ya construyen y pasan estos argumentos; no necesitas invocar el binario manualmente salvo para depuración.
 
-**Propósito:** ejecutar la implementación secuencial sobre una o varias llaves, recoger métricas y escribir una línea en el CSV secuencial correspondiente.
+## Scripts disponibles (resumen y ejemplos)
 
-**Qué hace:**
+Rutas: `./scripts/{encr_seq.sh,encr_par.sh,des_seq.sh,des_par.sh}`
 
-* Lee `IO/inputs/texto_entrada.txt` y envía su contenido al ejecutable por `stdin`.
-* Lee `IO/inputs/frase_busqueda.txt` (primera línea) y la pasa como argumento.
-* En modo manual, también puede recibir frase (`-f`) y texto (`-x`) directamente desde consola.
-* Para cada `key` ejecuta el binario una vez (por defecto, sin repeticiones adicionales).
-* El binario debe recibir los argumentos: `frase key p csv_path host` (en secuencial `p` = 1).
-* Guarda o actualiza resultados en el CSV secuencial (`data/implX/sec.csv`).
-* Por defecto, el script **ejecuta realmente el binario** (`TEST_MODE=false`).
+### `encr_seq.sh` — cifrado **secuencial**
 
-**Parámetros del script:**
+- Usa `texto_entrada.txt` o `-x "<texto>"` / `-X <archivo>` (lote).
+- Parámetros mínimos: `-i <impl1|impl2|impl3> -h <host> -k <key>`
+- Ejemplo:
 
-* `-i <impl1|impl2|impl3>` → implementación.
-* `-h <host_name>` → nombre del host (se guarda en CSV).
-* `-m <a|m>` → modo de ejecución:
+```bash
+./scripts/encr_seq.sh -i impl1 -h myhost -k 123456
+./scripts/encr_seq.sh -i impl2 -h myhost -k 42 -x "Esta es una prueba"
+```
 
-  * `a` = automático (itera sobre todas las llaves del array `KEYS`).
-  * `m` = manual (usa una sola key indicada con `-k`).
-* `-k <key>` → (modo `m`) llave a probar.
-* `-f "<frase>"` → (opcional, modo `m`) frase de búsqueda personalizada.
-* `-x "<texto>"` → (opcional, modo `m`) texto de entrada personalizado.
-* `-?` → muestra ayuda.
+### `encr_par.sh` — cifrado **paralelo** (MPI)
 
-**Interfaz del ejecutable:**
+- Igual comportamiento pero ejecutado con `mpirun -np 1` internamente (encrypt suele usar 1).
+- Parámetros: `-i -h -k` y opcionales `-x -X`.
+- Ejemplo:
 
-* `stdin` → texto completo.
-* `argv[1]` → `frase`.
-* `argv[2]` → `key`.
-* `argv[3]` → `p` (en secuencial siempre `1`).
-* `argv[4]` → `csv_path`.
-* `argv[5]` → `hostname`.
+```bash
+./scripts/encr_par.sh -i impl1 -h myhost -n 4 -k 123456
+```
 
-**Comandos válidos (ejemplos):**
+### `des_seq.sh` — descifrado **secuencial**
 
-* Automático (usa archivos `IO/inputs/`):
+- Lee `.bin` desde `IO/outputs/*.bin` (o `-B` lista).
+- Parámetros: `-i <impl> -h <host> -K <key_upper> [-f "<frase>"] [-B "<bin1 bin2 ...>"]`
+- Ejemplos:
 
-  ```bash
-  ./scripts/run_seq.sh -i impl1 -h myhost -m a
-  ```
+```bash
+./scripts/des_seq.sh -i impl1 -h myhost -K 123456
+./scripts/des_seq.sh -i impl2 -h myhost -K 18014398509481983 -f "es una prueba de"
+```
 
-* Manual (solo con key):
+### `des_par.sh` — descifrado **paralelo (MPI)**
 
-  ```bash
-  ./scripts/run_seq.sh -i impl1 -h myhost -m m -k 123456
-  ```
+- Ejecuta `mpirun -np <NP>` internamente; itera sobre `.bin` o la lista `-B`.
+- Parámetros: `-i <impl> -h <host> -n <np> -K <key_upper> [-f "<frase>"] [-B "<bin1 bin2 ...>"]`
+- Ejemplos (pruebas recomendadas):
 
-* Manual con frase y texto personalizados:
+```bash
+# impl1
+./scripts/des_par.sh -i impl1 -h myhost -n 2 -K 123456
+./scripts/des_par.sh -i impl1 -h myhost -n 4 -K 18014398509481983
+./scripts/des_par.sh -i impl1 -h myhost -n 8 -K 18014398509481984
 
-  ```bash
-  ./scripts/run_seq.sh -i impl1 -h myhost -m m -k 123456 \
-    -f "es una prueba de" -x "Esta es una prueba de proyecto 2"
-  ```
+# impl2
+./scripts/des_par.sh -i impl2 -h myhost -n 2 -K 123456
+./scripts/des_par.sh -i impl2 -h myhost -n 4 -K 18014398509481983
+./scripts/des_par.sh -i impl2 -h myhost -n 8 -K 18014398509481984
 
-### `run_par.sh` — ejecución **paralela** (keys × p)
+# impl3
+./scripts/des_par.sh -i impl3 -h myhost -n 2 -K 123456
+./scripts/des_par.sh -i impl3 -h myhost -n 4 -K 18014398509481983
+./scripts/des_par.sh -i impl3 -h myhost -n 8 -K 18014398509481984
+```
 
-**Propósito:** ejecutar la implementación paralela sobre combinaciones de llaves y número de procesos `p`, recoger métricas y escribir en el CSV paralelo.
+## CSV de salida y métricas
 
-**Qué hace:**
+Encabezado (global):
 
-* Lee `IO/inputs/texto_entrada.txt` (o usa `-x` en manual) y lo pasa a todos los procesos MPI por `stdin`.
-* Lee `IO/inputs/frase_busqueda.txt` (o usa `-f` en manual) y lo pasa como argumento.
-* En modo automático (`-m a`) itera sobre todas las `KEYS` y valores de `P_LIST`.
-* En modo manual (`-m m`) ejecuta una sola combinación `-k <key>` y `-p <p>`.
-* Ejecuta con `mpirun -np <p> <bin>`.
-* Guarda resultados en `data/implX/par.csv`.
-* Por defecto, el script **ejecuta realmente el binario** (`TEST_MODE=false`).
+```csv
+implementation,mode,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text,out_bin
+```
 
-**Parámetros del script:**
+Rutas por implementación:
 
-* `-i <impl1|impl2|impl3>` → implementación.
-* `-h <host_name>` → nombre del host.
-* `-m <a|m>` → modo de ejecución.
-* `-k <key>` → (modo `m`) llave a probar.
-* `-p <p>` → (modo `m`) número de procesos.
-* `-f "<frase>"` → (opcional, modo `m`) frase de búsqueda.
-* `-x "<texto>"` → (opcional, modo `m`) texto a procesar.
-* `-?` → muestra ayuda.
-
-**Interfaz del ejecutable:**
-
-* `stdin` → texto completo.
-* `argv[1]` → `frase`.
-* `argv[2]` → `key`.
-* `argv[3]` → `p`.
-* `argv[4]` → `csv_path`.
-* `argv[5]` → `hostname`.
-
-**Comandos válidos (ejemplos):**
-
-* Automático (itera keys × P_LIST):
-
-  ```bash
-  ./scripts/run_par.sh -i impl1 -h myhost -m a
-  ```
-
-* Manual (key y procesos específicos):
-
-  ```bash
-  ./scripts/run_par.sh -i impl1 -h myhost -m m -k 123456 -p 4
-  ```
-
-* Manual con frase y texto personalizados:
-
-  ```bash
-  ./scripts/run_par.sh -i impl1 -h myhost -m m -k 123456 -p 4 \
-    -f "es una prueba de" -x "Esta es una prueba de proyecto 2"
-  ```
-
-**Notas para paralela:**
-
-* Asegúrate de que `mpirun` funcione correctamente antes de ejecutar.
-* No lances múltiples ejecuciones paralelas simultáneas en la misma máquina.
-* Ajusta `P_LIST` según tu hardware (`2,4,8,...`).
+- Secuencial → `data/impl{1,2,3}/sec.csv`
+- Paralelo   → `data/impl{1,2,3}/par.csv`
