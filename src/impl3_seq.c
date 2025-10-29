@@ -2,105 +2,169 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <errno.h>
 
 #include "../include/common.h"
-#include "../include/impl3.h"
+#include "../include/core_utils.h"
+#include "../include/core_crypto.h"
 
-static const char *CSV_HEADER =
-"implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text";
-
-// lectura total de stdin
-static unsigned char *readAllStdin(size_t *out_len) {
-    size_t cap = 4096, len = 0;
-    unsigned char *buf = malloc(cap);
-    if (!buf) return NULL;
-    for (;;) {
-        size_t n = fread(buf + len, 1, cap - len, stdin);
-        len += n;
-        if (n == 0) break;
-        if (len == cap) {
-            cap *= 2;
-            unsigned char *t = realloc(buf, cap);
-            if (!t) { free(buf); return NULL; }
-            buf = t;
-        }
-    }
-    *out_len = len;
-    return buf;
+static void printUsage(const char *p)
+{
+    fprintf(stderr, "uso (seq): %s encrypt <key56> <out_bin> <csv_path> <hostname>\n", p);
+    fprintf(stderr, "           %s decrypt \"<frase>\" <key_upper> <p> <csv_path> <hostname> <in_bin>\n", p);
 }
 
-static void printUsage(const char *p) {
-    fprintf(stderr, "uso: echo \"<texto>\" | %s <frase> <key> <p> <csv_path> <hostname>\n", p);
-}
-
-int main(int argc, char **argv) {
-    if (argc < 6) {
+int main(int argc, char **argv)
+{
+    if (argc < 2)
+    {
         printUsage(argv[0]);
         return 2;
     }
+    const char *mode = argv[1];
 
-    const char *phrase   = argv[1];
-    uint64_t key_true    = strtoull(argv[2], NULL, 10);
-    int p                = atoi(argv[3]);
-    const char *csv_path = argv[4];
-    const char *hostname = argv[5];
-
-    size_t plain_len = 0;
-    unsigned char *plain = readAllStdin(&plain_len);
-    if (!plain || plain_len == 0) {
-        fprintf(stderr, "stdin vacio\n");
-        return 3;
-    }
-
-    unsigned char *cipher = NULL;
-    size_t cipher_len = 0;
-    encryptDesEcb(key_true, plain, plain_len, &cipher, &cipher_len);
-
-    struct timespec t0 = nowMono();
-    uint64_t iterations = 0;
-    int found = 0;
-    uint64_t found_key = UINT64_MAX;
-
-    for (uint64_t k = 0; k <= key_true; ++k) {
-        unsigned char *dec=NULL;
-        size_t dec_len=0;
-        decryptDesEcb(k, cipher, cipher_len, &dec, &dec_len);
-        iterations++;
-        if (containsPhrase(dec, dec_len, phrase)) {
-            found = 1;
-            found_key = k;
-            free(dec);
-            break;
+    // ---------- encrypt ----------
+    if (strcmp(mode, "encrypt") == 0)
+    {
+        if (argc < 6)
+        {
+            printUsage(argv[0]);
+            return 2;
         }
-        free(dec);
+
+        uint64_t key56 = strtoull(argv[2], NULL, 10);
+        const char *out_bin = argv[3];
+        const char *csv_path = argv[4];
+        const char *hostname = argv[5];
+
+        size_t plain_len = 0;
+        unsigned char *plain = readAllStdin(&plain_len);
+        if (!plain || plain_len == 0)
+        {
+            fprintf(stderr, "stdin vacio\n");
+            free(plain);
+            return 3;
+        }
+
+        struct timespec t0 = nowMono();
+        unsigned char *cipher = NULL;
+        size_t cipher_len = 0;
+        if (encryptDesEcb(key56, plain, plain_len, &cipher, &cipher_len) != 0)
+        {
+            fprintf(stderr, "encrypt fallo\n");
+            free(plain);
+            return 4;
+        }
+        struct timespec t1 = nowMono();
+        time_span_t dt = diffMono(t0, t1);
+
+        if (writeFile(out_bin, cipher, cipher_len) != 0)
+        {
+            fprintf(stderr, "no pude escribir %s\n", out_bin);
+        }
+
+        FILE *fp = fopen(csv_path, "a+");
+        if (fp)
+        {
+            ensureHeader(fp, CSV_HEADER);
+            char ts[64];
+            isoUtcNow(ts, sizeof ts);
+            char *plain_csv = csvSanitize(plain, plain_len);
+
+            fprintf(fp, "impl3,encrypt,%llu,0,1,%.9f,0,0,0,%s,%s,\"\",\"%s\",%s\n",
+                    (unsigned long long)key56, dt.secs, ts, hostname, plain_csv, out_bin);
+            free(plain_csv);
+            fclose(fp);
+        }
+        else
+        {
+            fprintf(stderr, "no pude abrir csv %s\n", csv_path);
+        }
+
+        free(plain);
+        free(cipher);
+        return 0;
     }
 
-    struct timespec t1 = nowMono();
-    time_span_t dt = diffMono(t0, t1);
+    if (strcmp(mode, "decrypt") == 0 || strcmp(mode, "brute") == 0)
+    {
+        if (argc < 8)
+        {
+            printUsage(argv[0]);
+            return 2;
+        }
 
-    printf(found ? "found=%llu\n" : "no encontrado\n", (unsigned long long)found_key);
+        const char *phrase = argv[2];
+        uint64_t key_upper = strtoull(argv[3], NULL, 10);
+        int p = atoi(argv[4]);
+        const char *csv_path = argv[5];
+        const char *hostname = argv[6];
+        const char *in_bin = argv[7];
 
-    FILE *fp = fopen(csv_path, "a+");
-    if (fp) {
-        ensureHeader(fp, CSV_HEADER);
-        char ts[64]; isoUtcNow(ts, sizeof ts);
-        char *plain_c = malloc(plain_len+1);
-        memcpy(plain_c, plain, plain_len);
-        plain_c[plain_len]='\0';
+        size_t cipher_len = 0;
+        unsigned char *cipher = readFile(in_bin, &cipher_len);
+        if (!cipher || cipher_len == 0)
+        {
+            fprintf(stderr, "no pude leer cipher %s\n", in_bin);
+            free(cipher);
+            return 3;
+        }
 
-        fprintf(fp,
-        "impl3,%llu,%d,%d,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"%s\"\n",
-        (unsigned long long)found_key,
-        p, 1, dt.secs,
-        (unsigned long long)iterations,
-        found, 0, ts, hostname, phrase, plain_c);
+        struct timespec t0 = nowMono();
+        uint64_t iterations = 0;
+        int found = 0;
+        uint64_t found_key = UINT64_MAX;
 
-        free(plain_c);
-        fclose(fp);
+        for (uint64_t k = 0; k <= key_upper; ++k)
+        {
+            unsigned char *dec = NULL;
+            size_t dec_len = 0;
+            if (decryptDesEcb(k, cipher, cipher_len, &dec, &dec_len) == 0)
+            {
+                iterations++;
+                if (containsPhrase(dec, dec_len, phrase))
+                {
+                    found = 1;
+                    found_key = k;
+                    free(dec);
+                    break;
+                }
+            }
+            free(dec);
+        }
+
+        struct timespec t1 = nowMono();
+        time_span_t dt = diffMono(t0, t1);
+
+        if (found)
+            printf("found=%llu\n", (unsigned long long)found_key);
+        else
+            printf("no encontrado\n");
+
+        FILE *fp = fopen(csv_path, "a+");
+        if (fp)
+        {
+            ensureHeader(fp, CSV_HEADER);
+            char ts[64];
+            isoUtcNow(ts, sizeof ts);
+
+            fprintf(fp,
+                    "impl3,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"\",%s\n",
+                    (unsigned long long)key_upper,
+                    p, dt.secs,
+                    (unsigned long long)iterations,
+                    found, 0,
+                    ts, hostname, phrase, in_bin);
+            fclose(fp);
+        }
+        else
+        {
+            fprintf(stderr, "no pude abrir csv %s\n", csv_path);
+        }
+
+        free(cipher);
+        return found ? 0 : 1;
     }
 
-    free(plain);
-    free(cipher);
-    return 0;
+    printUsage(argv[0]);
+    return 2;
 }
