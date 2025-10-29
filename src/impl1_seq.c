@@ -253,9 +253,9 @@ static void printUsage(const char *prog)
 {
   fprintf(stderr, "uso:\n");
   fprintf(stderr, "  encrypt: echo \"<texto>\" | %s encrypt <key> <out_bin> <csv> <hostname>\n", prog);
-  fprintf(stderr, "  descencriptar: %s descencriptar \"<frase>\" <key_upper> <p> <csv> <hostname> <in_bin>\n", prog);
+  fprintf(stderr, "  decrypt: %s decrypt \"<frase>\" <key_upper> <p> <csv> <hostname> <in_bin>\n", prog);
   fprintf(stderr, "ejemplo encrypt:\n  echo \"Esta es una prueba\" | %s encrypt 123456 cipher.bin data/impl1/sec.csv myhost\n", prog);
-  fprintf(stderr, "ejemplo descencriptar:\n  %s descencriptar \"es una prueba\" 123456 1 data/impl1/sec.csv myhost cipher.bin\n", prog);
+  fprintf(stderr, "ejemplo decrypt:\n  %s decrypt \"es una prueba\" 123456 1 data/impl1/sec.csv myhost cipher.bin\n", prog);
 }
 
 int main(int argc, char **argv)
@@ -344,8 +344,8 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  // ---------- descencriptar (alias: brute para compat) ----------
-  if (strcmp(mode, "descencriptar") == 0 || strcmp(mode, "brute") == 0)
+  // ---------- decrypt (alias: brute para compat) ----------
+  if (strcmp(mode, "decrypt") == 0 || strcmp(mode, "brute") == 0)
   {
     if (argc < 8)
     {
@@ -411,9 +411,9 @@ int main(int argc, char **argv)
       ensureHeader(fp, CSV_HEADER);
       char ts[32];
       isoUtcNow(ts, sizeof ts);
-      // phrase con comillas, text vacío; mode siempre "descencriptar"
+      // phrase con comillas, text vacío; mode siempre "decrypt"
       fprintf(fp,
-              "impl1,descencriptar,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"\",%s\n",
+              "impl1,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"\",%s\n",
               (unsigned long long)key_upper,
               p,
               dt.secs,
