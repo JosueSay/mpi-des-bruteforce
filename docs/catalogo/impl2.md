@@ -1,180 +1,172 @@
-# Catálogo de funciones y librerías — Implementación 2 (impl2 / altA)
+# Catálogo de funciones — Implementación 2 (Impl2)
 
-> Esta implementación ofrece modos `encrypt` y `decrypt/brute` en versiones **secuencial** y  **paralela (MPI)** , con salida en CSV estandarizada. Las firmas públicas de Impl2 están en `impl2.h`.
->
-> La CLI y la escritura CSV para **secuencial** están en `impl2_seq.c`.
->
-> La lógica **paralela (MPI)** y su CSV están en `impl2_par.c`.
+## Función `printUsage`
 
----
-
-## encryptDesEcb
-
-Implementa el **cifrado** (DES/ECB con padding 8-bytes si se compila con `-DUSE_OPENSSL -lcrypto`; de lo contrario, XOR simple para pruebas). Declarada en `impl2.h`; usada en `impl2_seq.c` (modo `encrypt`) y `impl2_par.c` (modo `encrypt`).
+Imprime en `stderr` las instrucciones de uso para la versión secuencial (`impl2_seq`).
 
 ### Entradas
 
-* **key56** — `uint64_t`
-
-  Clave de 56 bits (se pasa en un entero de 64).
-* **in** — `const unsigned char *`
-
-  Buffer de texto plano.
-* **len** — `size_t`
-
-  Longitud del texto plano.
+- **p**
+  - **Tipo:** `const char *`
+  - **Descripción:** Nombre del programa (normalmente `argv[0]`).
 
 ### Salidas
 
-* **out** — `unsigned char **`
+- **Ninguna**
+  - **Tipo:** `void`
+  - **Descripción:** Muestra texto de ayuda en la consola de error estándar.
 
-  Puntero a buffer con texto cifrado (se asigna dentro).
-* **out_len** — `size_t *`
+## Función `usage`
 
-  Longitud del cifrado.
-* **return** — `int`
-
-  `0` si ok; distinto de 0 si falla.
-
----
-
-## decryptDesEcb
-
-Implementa el **descifrado** (DES/ECB con unpadding si hay OpenSSL; XOR de prueba si no). Declarada en `impl2.h`; usada en `impl2_seq.c` (modo `decrypt/brute`) y `impl2_par.c` (modo `decrypt/brute`).
+Imprime las instrucciones de uso para la versión paralela MPI (`impl2_par`).
 
 ### Entradas
 
-* **key56** — `uint64_t`
-
-  Clave candidata (fuerza bruta).
-* **in** — `const unsigned char *`
-
-  Buffer cifrado.
-* **len** — `size_t`
-
-  Longitud del cifrado.
+- **p**
+  - **Tipo:** `const char *`
+  - **Descripción:** Nombre del programa (normalmente `argv[0]`).
 
 ### Salidas
 
-* **out** — `unsigned char **`
+- **Ninguna**
+  - **Tipo:** `void`
+  - **Descripción:** Muestra texto explicativo con los modos `encrypt` y `decrypt`.
 
-  Texto plano recuperado (asignado dentro).
-* **out_len** — `size_t *`
+## Función `main` — `impl2_seq.c`
 
-  Longitud del texto plano.
-* **return** — `int`
-
-  `0` si ok.
-
----
-
-## containsPhrase
-
-Valida si una **frase** aparece en el texto plano descifrado. Declarada en `impl2.h`; usada en los bucles de fuerza bruta secuencial y paralelo.
+Función principal para la ejecución **secuencial** del programa.  
+Permite cifrar (`encrypt`) o descifrar por fuerza bruta (`decrypt` o `brute`) usando DES-ECB.
 
 ### Entradas
 
-* **buf** — `const unsigned char *`
+- **argc**
+  - **Tipo:** `int`
+  - **Descripción:** Número de argumentos pasados por CLI.
 
-  Texto descifrado.
-* **len** — `size_t`
+- **argv**
+  - **Tipo:** `char **`
+  - **Descripción:** Vector con los argumentos del programa.  
 
-  Longitud del texto.
-* **phrase** — `const char *`
+#### Argumentos esperados (modo `encrypt`)
 
-  Frase a buscar (no vacía).
+1. `encrypt`
+2. `key56` — clave numérica de 56 bits.
+3. `out_bin` — ruta del archivo binario de salida.
+4. `csv_path` — ruta del archivo CSV.
+5. `hostname` — nombre del host.
+
+#### Argumentos esperados (modo `decrypt`)
+
+1. `decrypt` o `brute`
+2. `frase` — texto buscado dentro del descifrado.
+3. `key_upper` — límite superior de búsqueda de clave.
+4. `p` — parámetro informativo (número de procesos, en secuencial suele ser 1).
+5. `csv_path` — ruta del archivo CSV.
+6. `hostname`
+7. `in_bin` — archivo cifrado de entrada.
 
 ### Salidas
 
-* **return** — `int`
+- **Código de salida del proceso**
+  - **Tipo:** `int`
+  - **Descripción:**  
+    - `0` si la operación fue exitosa.  
+    - `1` si no se encontró la clave.  
+    - `2–5` para errores de uso, lectura o escritura.
 
-  `1` si la contiene; `0` en caso contrario.
+## Función `main` — `impl2_par.c`
 
----
-
-## printUsage / usage (CLI)
-
-Imprime uso de la herramienta:
-
-* **Secuencial** : `impl2_seq encrypt <key56> <out_bin> <csv_path> <hostname>` y `impl2_seq decrypt "<frase>" <key_upper> <p> <csv_path> <hostname> <in_bin>`.
-* **Paralelo (MPI)** : `mpirun -np <P> impl2_par encrypt <key56> <out_bin> <csv_path> <hostname>` y `mpirun -np <P> impl2_par decrypt "<frase>" <key_upper> <p> <csv_path> <hostname> <in_bin>`.
+Función principal de la implementación **paralela con MPI**.  
+Permite cifrar (`encrypt`) y descifrar por fuerza bruta distribuida (`decrypt`/`brute`) en múltiples procesos.
 
 ### Entradas
 
-* **p** — `const char *`
+- **argc**
+  - **Tipo:** `int`
+  - **Descripción:** Número de argumentos proporcionados al ejecutar el binario.
 
-  Nombre del ejecutable (argv[0]).
+- **argv**
+  - **Tipo:** `char **`
+  - **Descripción:** Lista de argumentos, interpretados según el modo (`encrypt` o `decrypt`).
 
-### Salidas
+#### Modo `encrypt`
 
-* **(stdout/stderr)** — Mensaje de ayuda; sin valor de retorno significativo.
+1. `encrypt`
+2. `key56` — clave numérica.
+3. `out_bin` — archivo binario cifrado.
+4. `csv_path` — ruta al archivo CSV.
+5. `hostname`.
 
----
+#### Modo `decrypt`
 
-## main (impl2_seq)
-
-Punto de entrada secuencial. Dos modos:
-
-* **encrypt** : lee  **stdin** , cifra y escribe binario; agrega fila al CSV.
-* **decrypt/brute** : lee cifrado, explora claves `0..key_upper`, registra métricas y CSV.
-
-### Entradas (vía argv)
-
-* `mode` (`"encrypt"` | `"decrypt"`/`"brute"`)
-* **encrypt** : `<key56> <out_bin> <csv_path> <hostname>`
-* **decrypt** : `"<frase>" <key_upper> <p> <csv_path> <hostname> <in_bin>`
-
-### Salidas
-
-* **stdout** — Mensajes “found=no/encontrado…”.
-* **Ficheros** — `out_bin` (encrypt), fila en `csv_path`.
-* **Código de salida** — `0` ok; `>0` error o no encontrado.
-
----
-
-## main (impl2_par, MPI)
-
-Punto de entrada paralelo. Dos modos:
-
-* **encrypt** : rank 0 lee  **stdin** , difunde, cifra y escribe binario + fila CSV.
-* **decrypt/brute** : rank 0 lee cifrado y difunde; todos exploran claves con **block-cyclic** (chunk 1 en esta versión), notifican **hallazgo temprano** con `TAG_FOUND`; rank 0 agrega fila CSV con **reducciones** (tiempo máx, iters totales, ganador).
-
-### Entradas (vía argv)
-
-* `mode` (`"encrypt"` | `"decrypt"`/`"brute"`)
-* **encrypt** : `<key56> <out_bin> <csv_path> <hostname>`
-* **decrypt** : `"<frase>" <key_upper> <p> <csv_path> <hostname> <in_bin>`
+1. `decrypt` o `brute`
+2. `frase` — texto a buscar.
+3. `key_upper` — límite de clave.
+4. `p` — parámetro informativo.
+5. `csv_path`.
+6. `hostname`.
+7. `in_bin` — archivo cifrado de entrada.
 
 ### Salidas
 
-* **stdout** — Resumen del hallazgo y tiempos.
-* **Ficheros** — `out_bin` (encrypt), fila en `csv_path`.
-* **Código de salida** — `0` ok/encontrado; `1` no encontrado; `2` uso inválido.
+- **Código de retorno**
+  - **Tipo:** `int`
+  - **Descripción:**
+    - `0`: éxito o clave encontrada.
+    - `1`: clave no encontrada.
+    - `2–5`: errores de argumentos, lectura o escritura.
 
+### Descripción del funcionamiento
 
+1. Inicializa MPI (`MPI_Init`, `MPI_Comm_rank`, `MPI_Comm_size`).
+2. En **modo `encrypt`**:
+   - `rank 0` lee el texto plano, cifra con DES, y difunde el resultado.
+   - Se escribe el archivo binario y se añade una fila al CSV.
+3. En **modo `decrypt`**:
+   - Todos los procesos reciben el `cipher` por difusión.
+   - Cada proceso explora subconjuntos de claves usando reparto *block-cyclic*.
+   - Si un proceso encuentra la frase, envía `TAG_FOUND` a los demás.
+   - Se reducen resultados con `MPI_Reduce` para consolidar métricas.
+   - `rank 0` escribe la fila consolidada al CSV.
 
-## Librerías y headers
+## Estructura `csv_row_t`
 
-* **MPI** — `#include <mpi.h>` (solo paralelo). Comunicación: `MPI_Init`, `MPI_Comm_rank`, `MPI_Comm_size`, `MPI_Bcast`, `MPI_Iprobe`, `MPI_Recv`, `MPI_Isend`, `MPI_Reduce`, `MPI_Finalize`.
-* **OpenSSL (opcional)** — DES/ECB real cuando se compila con `-DUSE_OPENSSL -lcrypto`. Si no, Impl2 puede usar fallback XOR (definido en capa de crypto). Declarado en `impl2.h`.
-* **C estándar** — `stdio.h`, `stdlib.h`, `string.h`, `stdint.h`, `errno.h` (manejo de errores/archivos/strings).
+Estructura auxiliar usada internamente en `impl2_par.c` para representar una fila del CSV.
 
-## Librerías y headers
+### Campos
 
-* **MPI** — `#include <mpi.h>` (solo paralelo). Comunicación: `MPI_Init`, `MPI_Comm_rank`, `MPI_Comm_size`, `MPI_Bcast`, `MPI_Iprobe`, `MPI_Recv`, `MPI_Isend`, `MPI_Reduce`, `MPI_Finalize`.
-* **OpenSSL (opcional)** — DES/ECB real cuando se compila con `-DUSE_OPENSSL -lcrypto`. Si no, Impl2 puede usar fallback XOR (definido en capa de crypto). Declarado en `impl2.h`.
-* **C estándar** — `stdio.h`, `stdlib.h`, `string.h`, `stdint.h`, `errno.h` (manejo de errores/archivos/strings).
+- **key**
+  - **Tipo:** `unsigned long long`
+  - **Descripción:** Clave probada o encontrada.
 
+- **p**
+  - **Tipo:** `int`
+  - **Descripción:** Número de procesos.
 
-## Librerías y headers
+- **repetition**
+  - **Tipo:** `int`
+  - **Descripción:** Número de repetición o corrida.
 
-* **MPI** — `#include <mpi.h>` (solo paralelo). Comunicación: `MPI_Init`, `MPI_Comm_rank`, `MPI_Comm_size`, `MPI_Bcast`, `MPI_Iprobe`, `MPI_Recv`, `MPI_Isend`, `MPI_Reduce`, `MPI_Finalize`.
-* **OpenSSL (opcional)** — DES/ECB real cuando se compila con `-DUSE_OPENSSL -lcrypto`. Si no, Impl2 puede usar fallback XOR (definido en capa de crypto). Declarado en `impl2.h`.
-* **C estándar** — `stdio.h`, `stdlib.h`, `string.h`, `stdint.h`, `errno.h` (manejo de errores/archivos/strings).
+- **time_seconds**
+  - **Tipo:** `double`
+  - **Descripción:** Tiempo total de ejecución en segundos.
 
+- **iterations_done**
+  - **Tipo:** `unsigned long long`
+  - **Descripción:** Cantidad de iteraciones ejecutadas.
 
-## Librerías y headers
+- **found**
+  - **Tipo:** `int`
+  - **Descripción:** Indicador (0/1) de si se encontró la frase.
 
-* **MPI** — `#include <mpi.h>` (solo paralelo). Comunicación: `MPI_Init`, `MPI_Comm_rank`, `MPI_Comm_size`, `MPI_Bcast`, `MPI_Iprobe`, `MPI_Recv`, `MPI_Isend`, `MPI_Reduce`, `MPI_Finalize`.
-* **OpenSSL (opcional)** — DES/ECB real cuando se compila con `-DUSE_OPENSSL -lcrypto`. Si no, Impl2 puede usar fallback XOR (definido en capa de crypto). Declarado en `impl2.h`.
-* **C estándar** — `stdio.h`, `stdlib.h`, `string.h`, `stdint.h`, `errno.h` (manejo de errores/archivos/strings).
+- **finder_rank**
+  - **Tipo:** `int`
+  - **Descripción:** Rank del proceso que encontró la clave.
+
+- **ts**
+  - **Tipo:** `char[64]`
+  - **Descripción:** Timestamp ISO.
+
+- **hostname**
+  - **Tipo:** `char[64]`
+  - **Descripción:** Nombre del host donde se ejecutó.

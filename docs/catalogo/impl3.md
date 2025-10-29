@@ -1,145 +1,135 @@
-# Catálogo de Funciones y Librerías — **Impl3 (Master–Worker)**
+# Catálogo de funciones — Implementación 3 (Impl3)
 
-## tryKey
+## Constantes (etiquetas MPI)
 
-Función que intenta descifrar un texto con una llave específica y valida si contiene la frase objetivo.
+- **TAG_REQ = 1**
+  - **Tipo:** `#define`  
+  - **Descripción:** Señal que envían los *workers* al maestro para solicitar un nuevo segmento de claves.
 
-### Entradas
+- **TAG_CHUNK = 2**
+  - **Tipo:** `#define`  
+  - **Descripción:** Respuesta del maestro con el rango `[inicio, fin]` a procesar; `UINT64_MAX, UINT64_MAX` indica detenerse.
 
-- **key**
-  - Tipo: `uint64_t`
-  - Clave a probar en el descifrado
-- **cipher**
-  - Tipo: `unsigned char*`
-  - Texto cifrado
-- **cipher_len**
+- **TAG_FOUND = 3**
+  - **Tipo:** `#define`  
+  - **Descripción:** Mensaje del *worker* al maestro notificando que encontró la clave y cuántas iteraciones realizó.
 
-  - Tipo: `int`
-  - Longitud del texto cifrado
-- **phrase**
-  - Tipo: `char*`
-  - Frase clave a buscar en el texto descifrado
+## Función `printUsage` — **paralela** (`impl3_par.c`)
 
-### Salidas
-
-- **resultado**
-  - Tipo: `int`
-  - 1 si la frase fue encontrada (descifrado correcto), 0 en caso contrario
-
-## request_chunk (Worker)
-
-Envía un mensaje al maestro indicando que necesita más trabajo (más llaves para probar).
+Imprime en `stderr` las instrucciones de uso para la versión MPI.
 
 ### Entradas
 
-- **rank**
-  - Tipo: `int`
-  - Identificador del proceso worker que pide trabajo
+- **p**
+  - **Tipo:** `const char *`
+  - **Descripción:** Nombre del programa (`argv[0]`).
 
 ### Salidas
 
-- No retorna valores
-- Efecto: Envío de mensaje MPI con etiqueta `TAG_REQ`
+- **Ninguna**
+  - **Tipo:** `void`
+  - **Descripción:** Muestra los modos `encrypt` y `decrypt`.
 
-## send_chunk (Master)
+## Función `printUsage` — **secuencial** (`impl3_seq.c`)
 
-Asigna un rango de llaves (chunk) a un worker que lo solicita.
+Imprime en `stderr` las instrucciones de uso para la versión secuencial.
 
 ### Entradas
 
-- **dest**
-  - Tipo: `int`
-  - Rank del worker que recibirá el chunk
-- **start**
-  - Tipo: `uint64_t`
-  - Inicio del rango de llaves
-- **end**
-  - Tipo: `uint64_t`
-  - Final del rango de llaves
+- **p**
+  - **Tipo:** `const char *`
+  - **Descripción:** Nombre del programa (`argv[0]`).
 
 ### Salidas
 
-- No retorna valores
-- Efecto: Envío de mensaje MPI con etiqueta `TAG_CHUNK`
+- **Ninguna**
+  - **Tipo:** `void`
+  - **Descripción:** Muestra los modos `encrypt` y `decrypt`.
 
-## process_chunk (Worker)
+## Función `main` — **secuencial** (`impl3_seq.c`)
 
-Prueba cada llave del chunk asignado hasta encontrar la correcta o terminar el rango.
+Punto de entrada de la versión **secuencial**. Soporta `encrypt` y `decrypt`/`brute`.
 
 ### Entradas
 
-- **start**, **end**
-  - Tipo: `uint64_t`
-  - Rango de llaves a probar
-- **cipher**, **cipher_len**, **phrase**
-  - Igual que en tryKey
+- **argc**
+  - **Tipo:** `int`
+  - **Descripción:** Número de argumentos.
+- **argv**
+  - **Tipo:** `char **`
+  - **Descripción:** Vector de argumentos.
+
+#### Argumentos esperados (modo `encrypt`)
+
+1. `encrypt`  
+2. `key56` — clave numérica.  
+3. `out_bin` — archivo binario de salida.  
+4. `csv_path` — ruta al CSV.  
+5. `hostname`.
+
+#### Argumentos esperados (modo `decrypt`/`brute`)
+
+1. `decrypt` o `brute`  
+2. `frase` — texto a buscar.  
+3. `key_upper` — límite superior de búsqueda.  
+4. `p` — parámetro informativo.  
+5. `csv_path`.  
+6. `hostname`.  
+7. `in_bin` — archivo cifrado de entrada.
 
 ### Salidas
 
-- **found_key**
-  - Tipo: `uint64_t`
-  - Llave encontrada, o `UINT64_MAX` si no hubo éxito
+- **Código de retorno**
+  - **Tipo:** `int`
+  - **Descripción:** `0` éxito; `1` no se encontró clave; `2–4` errores de uso/operación.
 
-## notify_found (Worker → Master)
+### Descripción de funcionamiento
 
-Avisa al maestro que una llave válida ha sido encontrada.
+- Lee `stdin` (en `encrypt`) o el binario (`in_bin`) en `decrypt`.  
+- Mide tiempo, ejecuta cifrado/descifrado, verifica la frase, imprime resultado y registra una fila en el CSV. :contentReference[oaicite:6]{index=6}
+
+## Función `main` — **paralela MPI** (`impl3_par.c`)
+
+Punto de entrada de la versión **paralela** con modelo **maestro–worker** dinámico.
 
 ### Entradas
 
-- **key**
-  - Tipo: `uint64_t`
-  - Llave encontrada
+- **argc**
+  - **Tipo:** `int`
+  - **Descripción:** Número de argumentos.
+- **argv**
+  - **Tipo:** `char **`
+  - **Descripción:** Vector de argumentos.
+
+#### Modo `encrypt`
+
+1. `encrypt`  
+2. `key56` — clave numérica.  
+3. `out_bin` — archivo binario de salida.  
+4. `csv_path` — ruta al CSV.  
+5. `hostname`.
+
+#### Modo `decrypt`/`brute`
+
+1. `decrypt` o `brute`  
+2. `frase` — texto a buscar.  
+3. `key_upper` — límite superior de búsqueda.  
+4. `p` — parámetro informativo.  
+5. `csv_path`.  
+6. `hostname`.  
+7. `in_bin` — archivo cifrado de entrada.
 
 ### Salidas
 
-- No retorna valores
-- Efecto: Envío de mensaje MPI con etiqueta `TAG_FOUND`
+- **Código de retorno**
+  - **Tipo:** `int`
+  - **Descripción:** `0` si se encontró/operó con éxito; `1` si no se encontró clave; `2` o códigos de aborto para errores.
 
-## broadcast_stop (Master)
+### Descripción de funcionamiento
 
-Envía la señal de finalización a todos los procesos cuando se encuentra la llave.
-
-### Entradas
-
-- **found_flag**
-  - Tipo: `int`
-  - Siempre 1 en este contexto
-
-### Salidas
-
-- No retorna valores
-- Efecto: Enviar **STOP** a todos los ranks con `MPI_Bcast`
-
-## generate_chunk_range (Master)
-
-Calcula los rangos `(start, end)` de trabajo para cada asignación dinámica.
-
-### Entradas
-
-- **next_chunk**
-  - Tipo: `uint64_t`
-  - Primer número no probado
-- **chunk_size**
-  - Tipo: `uint64_t`
-  - Tamaño del bloque asignado
-
-### Salidas
-
-- **start**
-  - Tipo: `uint64_t`
-- **end**
-
-  - Tipo: `uint64_t`
-
-> `next_chunk = end + 1` después de la asignación.
-
-## Librerías principales utilizadas
-
-| Librería                            | Uso principal                                                                        |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| `<mpi.h>`                           | Envío/recepción de mensajes: `MPI_Send`, `MPI_Recv`, `MPI_Bcast`, `MPI_Iprobe`, etc. |
-| `<openssl/des.h>` *(o equivalente)* | Cifrado/descifrado DES en tryKey                                                     |
-| `<stdint.h>`                        | Llaves de 56 bits con `uint64_t`                                                     |
-| `<string.h>`                        | Validación de frase con `strstr` + copias de buffer                                  |
-| `<stdio.h>` + `<stdlib.h>`          | I/O, memoria, mensajes de debug                                                      |
-| `<time.h>`                          | Medición de tiempos si no se usa `MPI_Wtime`                                         |
+- Inicializa MPI y difunde datos de entrada.  
+- **`encrypt`**: `rank 0` cifra, mide, escribe binario y fila CSV.
+- **`decrypt`**:
+  - **Maestro (`rank 0`)**: asigna rangos de claves por demanda (*work pulling*). Atiende `TAG_REQ` enviando `[inicio, fin]` vía `TAG_CHUNK`; ante `TAG_FOUND` difunde paradas con `[UINT64_MAX, UINT64_MAX]`.
+  - **Workers (`rank > 0`)**: piden trabajo (`TAG_REQ`), descifran el rango recibido (`TAG_CHUNK`), notifican hallazgo con `TAG_FOUND` (clave + iteraciones) y se detienen.
+  - Consolida métricas con `MPI_Allreduce` (iteraciones totales, clave mínima encontrada y *rank* del ganador) y registra en CSV.
