@@ -53,7 +53,7 @@ print_cfg(){
   printf "\t- %boutputs dir:%b\t%s\n" "${CLR_B}" "${CLR_RESET}" "${IO_OUT}"
   printf "\t- %bnp:%b\t\t%s\n"        "${CLR_B}" "${CLR_RESET}" "${NP}"
   printf "\t- %bkey_upper:%b\t%s\n"   "${CLR_B}" "${CLR_RESET}" "${KEY_UP}"
-  printf "\t- %bfrase:%b\t\t\"%s\"\n" "${CLR_B}" "${CLR_RESET}" "${PHRASE}"
+  printf "\t- %bfrase:%b\t\"%s\"\n" "${CLR_B}" "${CLR_RESET}" "${PHRASE}"
 }
 
 # ========= parse =========
