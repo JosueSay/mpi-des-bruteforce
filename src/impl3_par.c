@@ -282,7 +282,7 @@ int main(int argc, char **argv)
 
                 fprintf(fp,
                         "impl3,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"%s\",%s\n",
-                        (unsigned long long)(found_flag ? found_key_global : key_upper),
+                        (unsigned long long)key_upper,
                         p_param,
                         dt.secs,
                         (unsigned long long)iters_global,

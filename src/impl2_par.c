@@ -282,7 +282,7 @@ int main(int argc, char **argv)
 
       fprintf(fp,
               "impl2,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,%s,\"\",%s\n",
-              (unsigned long long)key_for_csv, size, max_time,
+              (unsigned long long)key_upper, size, max_time,
               (unsigned long long)total_iters, found_any, global_winner,
               ts, host, phrase_csv, in_bin);
 
