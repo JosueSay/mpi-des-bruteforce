@@ -79,3 +79,19 @@ La técnica es reconocida como una mejora **práctica y teórica** ante el repar
 
 La implementación Master–Worker **maximiza el grado de paralelismo efectivo**, mitigando la aleatoriedad del naive y permitiendo una **evaluación consistente y objetiva del speedup**.
 Este acercamiento representa un diseño **más escalable, más justo entre procesos**, y orientado al rendimiento en entornos distribuidos como MPI.
+
+
+## Referencias (formato APA recomendado)
+
+MPI y modelo Master–Worker
+
+1. D. Gropp, R. Thakur & W. Gropp.
+Using MPI: Portable Programming with the Message Passing Interface.
+MIT Press, 2014. ISBN: 978-0262527392.
+
+2. MPICH Documentation. “Master/Worker Pattern in MPI”.
+Disponible en: https://www.mpich.org/documentation/
+
+3. Rabenseifner, R. “Hybrid MPI + OpenMP Programming” (Tutorial).
+HLRS, Stuttgart, 2020.
+https://fs.hlrs.de/projects/par/mpi/
