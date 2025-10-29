@@ -28,7 +28,7 @@ make all-par USE_OPENSSL=1
 
 # una específica
 make impl1-seq USE_OPENSSL=1
-make impl1-par  USE_OPENSSL=1
+make impl1-par USE_OPENSSL=1
 
 # limpiar
 make clean
