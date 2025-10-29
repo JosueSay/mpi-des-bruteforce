@@ -125,7 +125,7 @@ for binf in "${BINS[@]}"; do
   printf "\t- %bcsv:%b\t\t%s\n"     "${CLR_B}" "${CLR_RESET}" "${CSV}"
   printf "\t- %bhost:%b\t\t%s\n"    "${CLR_B}" "${CLR_RESET}" "${HOST}"
 
-  REAL_CMD=( mpirun -np "${NP}" "${BIN}" descencriptar "${PHRASE}" "${KEY_UP}" "${NP}" "${CSV}" "${HOST}" "${binf}" )
+  REAL_CMD=( mpirun -np "${NP}" "${BIN}" decrypt "${PHRASE}" "${KEY_UP}" "${NP}" "${CSV}" "${HOST}" "${binf}" )
   printf "%bComando:%b\n\t- %b" "${CLR_C}" "${CLR_RESET}" "${CLR_Y}"; printf "%q " "${REAL_CMD[@]}"; printf "%b\n" "${CLR_RESET}"
 
   # --- ejecutar con spinner controlado por PID, sin re-ejecutar ---
