@@ -22,7 +22,6 @@ int main(int argc, char **argv)
     }
     const char *mode = argv[1];
 
-    // ---------- encrypt ----------
     if (strcmp(mode, "encrypt") == 0)
     {
         if (argc < 6)

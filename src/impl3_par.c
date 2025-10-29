@@ -67,31 +67,31 @@ int main(int argc, char **argv)
         MPI_Bcast(&plain_len, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
         if (rank != 0)
         {
-
             plain = (unsigned char *)malloc(plain_len ? plain_len : 1);
             if (!plain)
                 MPI_Abort(MPI_COMM_WORLD, 12);
         }
         MPI_Bcast(plain, (int)plain_len, MPI_UNSIGNED_CHAR, 0, MPI_COMM_WORLD);
 
-        unsigned char *cipher = NULL;
-        size_t cipher_len = 0;
         if (rank == 0)
         {
+            unsigned char *cipher = NULL;
+            size_t cipher_len = 0;
+
+            struct timespec t0 = nowMono();
             if (encryptDesEcb(key56, plain, plain_len, &cipher, &cipher_len) != 0)
             {
                 fprintf(stderr, "encrypt fallo\n");
                 MPI_Abort(MPI_COMM_WORLD, 4);
             }
+            struct timespec t1 = nowMono();
+            time_span_t dt = diffMono(t0, t1);
 
             if (writeFile(out_bin, cipher, cipher_len) != 0)
             {
                 fprintf(stderr, "no pude escribir %s\n", out_bin);
             }
-        }
 
-        if (rank == 0)
-        {
             FILE *fp = fopen(csv_path, "a+");
             if (!fp)
             {
@@ -104,16 +104,13 @@ int main(int argc, char **argv)
                 isoUtcNow(ts, sizeof ts);
                 char *plain_csv = csvSanitize(plain, plain_len);
 
-                struct timespec t0 = nowMono();
-                struct timespec t1 = nowMono();
-                time_span_t dt = diffMono(t0, t1);
-                fprintf(fp, "impl3,encrypt,%llu,0,1,%.9f,0,0,0,%s,%s,\"\",\"%s\",%s\n",
-                        (unsigned long long)key56,
-                        dt.secs,
-                        ts, hostname, plain_csv, out_bin);
+                fprintf(fp, "impl3,encrypt,%llu,%d,1,%.9f,0,0,0,%s,%s,\"\",\"%s\",%s\n",
+                        (unsigned long long)key56, size, dt.secs, ts, hostname, plain_csv, out_bin);
+
                 free(plain_csv);
                 fclose(fp);
             }
+
             free(cipher);
         }
 
@@ -121,7 +118,8 @@ int main(int argc, char **argv)
         MPI_Finalize();
         return 0;
     }
-    else if (strcmp(mode, "decrypt") == 0 || strcmp(mode, "brute") == 0)
+
+    if (strcmp(mode, "decrypt") == 0 || strcmp(mode, "brute") == 0)
     {
         if (argc < 8)
         {
@@ -260,49 +258,60 @@ int main(int argc, char **argv)
         MPI_Allreduce(&iters_local, &iters_global, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
         MPI_Allreduce(&found_key_local, &found_key_global, 1, MPI_UNSIGNED_LONG_LONG, MPI_MIN, MPI_COMM_WORLD);
 
+        int my_rank_if_found = local_found ? rank : 1000000000;
+        int finder_rank_global = 0, tmp_min_rank = 0;
+        MPI_Allreduce(&my_rank_if_found, &tmp_min_rank, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+        finder_rank_global = (found_key_global == UINT64_MAX) ? 0 : tmp_min_rank;
+
         struct timespec t1 = nowMono();
         time_span_t dt = diffMono(t0, t1);
         char ts[64];
         isoUtcNow(ts, sizeof ts);
 
-        char *plain_text_csv = NULL;
-
-        char csvpath[256];
-        snprintf(csvpath, sizeof(csvpath), "%s/impl3_par_rank%d.csv", csv_path, rank);
-        FILE *fp = fopen(csvpath, "a+");
-        if (!fp)
+        if (rank == 0)
         {
-            if (rank == 0)
-                fprintf(stderr, "no pude abrir csv %s\n", csvpath);
-        }
-        else
-        {
-            ensureHeader(fp, CSV_HEADER);
-            uint64_t key_out = (found_key_global != UINT64_MAX) ? found_key_global : key_upper;
-            int found_flag = (found_key_global != UINT64_MAX) ? 1 : 0;
-            int finder_rank = found_flag ? rank : 0;
-            char *text_print = plain_text_csv ? plain_text_csv : "";
-            fprintf(fp, "impl3,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"%s\",\n",
-                    (unsigned long long)key_out,
-                    p_param,
-                    dt.secs,
-                    (unsigned long long)iters_global,
-                    found_flag,
-                    (found_flag ? finder_rank : 0),
-                    ts, hostname, phrase, text_print);
-            fclose(fp);
+            FILE *fp = fopen(csv_path, "a+");
+            if (!fp)
+            {
+                fprintf(stderr, "no pude abrir csv %s\n", csv_path);
+            }
+            else
+            {
+                ensureHeader(fp, CSV_HEADER);
+                int found_flag = (found_key_global != UINT64_MAX);
+
+                fprintf(fp,
+                        "impl3,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"%s\",%s\n",
+                        (unsigned long long)(found_flag ? found_key_global : key_upper),
+                        p_param,
+                        dt.secs,
+                        (unsigned long long)iters_global,
+                        found_flag,
+                        found_flag ? finder_rank_global : 0,
+                        ts, hostname, phrase, "", in_bin);
+                fclose(fp);
+
+                if (found_flag)
+                {
+                    fprintf(stdout, "%llu encontrado; tiempo=%.6f s; iters=%llu; rank=%d\n",
+                            (unsigned long long)found_key_global, dt.secs,
+                            (unsigned long long)iters_global, finder_rank_global);
+                }
+                else
+                {
+                    fprintf(stdout, "no encontrado; tiempo=%.6f s; iters=%llu\n",
+                            dt.secs, (unsigned long long)iters_global);
+                }
+            }
         }
 
-        free(plain_text_csv);
         free(cipher);
         MPI_Finalize();
         return (found_key_global != UINT64_MAX) ? 0 : 1;
     }
-    else
-    {
-        if (rank == 0)
-            printUsage(argv[0]);
-        MPI_Finalize();
-        return 2;
-    }
+
+    if (rank == 0)
+        printUsage(argv[0]);
+    MPI_Finalize();
+    return 2;
 }
