@@ -149,7 +149,7 @@ int main(int argc, char **argv)
 
     const char *phrase = argv[2];
     uint64_t key_upper = strtoull(argv[3], NULL, 10);
-    int p_cli = atoi(argv[4]);
+    (void)argv[4];
     const char *csv = argv[5];
     const char *host = argv[6];
     const char *in_bin = argv[7];
@@ -241,37 +241,33 @@ int main(int argc, char **argv)
   FINISH:;
     time_span_t dt = diffMono(t0, nowMono());
 
+    double local_time = dt.secs, max_time = 0.0;
+    MPI_Reduce(&local_time, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    unsigned long long local_iters = (unsigned long long)iterations, total_iters = 0ULL;
+    MPI_Reduce(&local_iters, &total_iters, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    int local_found = found, found_any = 0;
+    MPI_Reduce(&local_found, &found_any, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    int local_winner = (winner_rank < 0 ? -1 : winner_rank), global_winner = -1;
+    MPI_Reduce(&local_winner, &global_winner, 1, MPI_INT, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    uint64_t key_for_csv = (found_key == (uint64_t)(~0ULL) ? key_upper : found_key);
+
     if (rank == 0)
     {
-      if (found)
+      if (found_any)
       {
-        printf("%llu encontrado; tiempo=%.6f s; iters_local=%llu\n",
-               (unsigned long long)found_key, dt.secs, (unsigned long long)iterations);
+        printf("%llu encontrado; tiempo=%.6f s; iters_total=%llu\n",
+               (unsigned long long)key_for_csv, max_time, (unsigned long long)total_iters);
       }
       else
       {
-        printf("no encontrado; tiempo=%.6f s; iters_local=%llu\n",
-               dt.secs, (unsigned long long)iterations);
+        printf("no encontrado; tiempo=%.6f s; iters_total=%llu\n",
+               max_time, (unsigned long long)total_iters);
       }
-    }
 
-    csv_row_t row;
-    row.key = (found_key == (uint64_t)(~0ULL) ? (unsigned long long)key_upper : (unsigned long long)found_key);
-    row.p = size;
-    row.repetition = 1;
-    row.time_seconds = dt.secs;
-    row.iterations_done = (unsigned long long)iterations;
-    row.found = found;
-    row.finder_rank = (winner_rank < 0 ? -1 : winner_rank);
-    isoUtcNow(row.ts, sizeof row.ts);
-    snprintf(row.hostname, sizeof row.hostname, "%s", host);
-
-    if (rank != 0)
-    {
-      MPI_Send(&row, sizeof(row), MPI_BYTE, 0, TAG_ROW, MPI_COMM_WORLD);
-    }
-    else
-    {
       FILE *fp = fopen(csv, "a+");
       if (!fp)
       {
@@ -280,20 +276,16 @@ int main(int argc, char **argv)
       }
       ensureHeader(fp, CSV_HEADER);
 
+      char ts[64];
+      isoUtcNow(ts, sizeof ts);
       char *phrase_csv = csvSanitize((const unsigned char *)phrase, strlen(phrase));
-      /* rank 0 */
+
       fprintf(fp,
               "impl2,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,%s,\"\",%s\n",
-              row.key, row.p, row.time_seconds, row.iterations_done, row.found, row.finder_rank, row.ts, row.hostname, phrase_csv, in_bin);
+              (unsigned long long)key_for_csv, size, max_time,
+              (unsigned long long)total_iters, found_any, global_winner,
+              ts, host, phrase_csv, in_bin);
 
-      for (int i = 1; i < size; ++i)
-      {
-        csv_row_t rcv;
-        MPI_Recv(&rcv, sizeof(rcv), MPI_BYTE, MPI_ANY_SOURCE, TAG_ROW, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        fprintf(fp,
-                "impl2,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,%s,\"\",%s\n",
-                rcv.key, rcv.p, rcv.time_seconds, rcv.iterations_done, rcv.found, rcv.finder_rank, rcv.ts, rcv.hostname, phrase_csv, in_bin);
-      }
       free(phrase_csv);
       fclose(fp);
     }
