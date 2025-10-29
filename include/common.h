@@ -6,12 +6,17 @@
 #include <stdio.h>
 #include <time.h>
 
+// csv header compartido por todas las implementaciones
+static const char *CSV_HEADER =
+    "implementation,mode,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text,out_bin";
+
 typedef struct
 {
   double secs;
   long nsec;
 } time_span_t;
 
+// devuelve timestamp monotónico
 static inline struct timespec nowMono()
 {
   struct timespec ts;
@@ -19,6 +24,7 @@ static inline struct timespec nowMono()
   return ts;
 }
 
+// diferencia entre dos tiempos monotónicos en segundos + nsec
 static inline time_span_t diffMono(struct timespec a, struct timespec b)
 {
   time_span_t d;
@@ -34,6 +40,7 @@ static inline time_span_t diffMono(struct timespec a, struct timespec b)
   return d;
 }
 
+// escribe header si el archivo está vacío
 static inline void ensureHeader(FILE *fp, const char *header_csv)
 {
   long pos = ftell(fp);
@@ -46,6 +53,7 @@ static inline void ensureHeader(FILE *fp, const char *header_csv)
   fseek(fp, pos, SEEK_SET);
 }
 
+// escribe timestamp UTC ISO8601 en buf
 static inline void isoUtcNow(char *buf, size_t n)
 {
   time_t t = time(NULL);
@@ -54,4 +62,4 @@ static inline void isoUtcNow(char *buf, size_t n)
   strftime(buf, n, "%Y-%m-%dT%H:%M:%SZ", &g);
 }
 
-#endif
+#endif // COMMON_H

@@ -4,10 +4,10 @@ Este documento describe los **parámetros de entrada que todas las implementacio
 
 ## Ubicación de los archivos de entrada
 
-Los archivos de entrada se encuentran en la carpeta `inputs/`:
+Los archivos de entrada se encuentran en la carpeta `IO/inputs/`:
 
 ```bash
-inputs/
+IO/inputs/
 ├── texto_entrada.txt       # Contiene el texto cifrado que se desea descifrar
 └── frase_busqueda.txt      # Contiene la palabra o frase clave a buscar en el texto descifrado
 ```
@@ -17,7 +17,7 @@ inputs/
 ### 1. Texto de entrada (`texto_entrada.txt`)
 
 * **Descripción:** Texto cifrado que el programa intentará descifrar usando fuerza bruta.
-* **Ubicación:** `inputs/texto_entrada.txt`
+* **Ubicación:** `IO/inputs/texto_entrada.txt`
 * **Tipo:** Archivo de texto plano (`.txt`)
 * **Valor fijo:** Sí. Este archivo debe mantenerse igual para todas las pruebas obligatorias.
 * **Uso:** Cargado por el programa al iniciar; todas las implementaciones usan el mismo texto.
@@ -25,7 +25,7 @@ inputs/
 ### 2. Palabra o frase clave (`frase_busqueda.txt`)
 
 * **Descripción:** Substring que debe aparecer en el texto descifrado si se encuentra la llave correcta.
-* **Ubicación:** `inputs/frase_busqueda.txt`
+* **Ubicación:** `IO/inputs/frase_busqueda.txt`
 * **Tipo:** Archivo de texto plano (`.txt`)
 * **Valor fijo:** Sí. No debe cambiar entre ejecuciones.
 * **Uso:** Permite validar que el descifrado fue exitoso (por ejemplo, usando `strstr` o función equivalente).
@@ -56,8 +56,8 @@ A continuación se documenta **qué hace cada script**, **qué parámetros recib
 
 **Qué hace:**
 
-* Lee `inputs/texto_entrada.txt` y envía su contenido al ejecutable por `stdin`.
-* Lee `inputs/frase_busqueda.txt` (primera línea) y la pasa como argumento.
+* Lee `IO/inputs/texto_entrada.txt` y envía su contenido al ejecutable por `stdin`.
+* Lee `IO/inputs/frase_busqueda.txt` (primera línea) y la pasa como argumento.
 * En modo manual, también puede recibir frase (`-f`) y texto (`-x`) directamente desde consola.
 * Para cada `key` ejecuta el binario una vez (por defecto, sin repeticiones adicionales).
 * El binario debe recibir los argumentos: `frase key p csv_path host` (en secuencial `p` = 1).
@@ -88,7 +88,7 @@ A continuación se documenta **qué hace cada script**, **qué parámetros recib
 
 **Comandos válidos (ejemplos):**
 
-* Automático (usa archivos `inputs/`):
+* Automático (usa archivos `IO/inputs/`):
 
   ```bash
   ./scripts/run_seq.sh -i impl1 -h myhost -m a
@@ -113,8 +113,8 @@ A continuación se documenta **qué hace cada script**, **qué parámetros recib
 
 **Qué hace:**
 
-* Lee `inputs/texto_entrada.txt` (o usa `-x` en manual) y lo pasa a todos los procesos MPI por `stdin`.
-* Lee `inputs/frase_busqueda.txt` (o usa `-f` en manual) y lo pasa como argumento.
+* Lee `IO/inputs/texto_entrada.txt` (o usa `-x` en manual) y lo pasa a todos los procesos MPI por `stdin`.
+* Lee `IO/inputs/frase_busqueda.txt` (o usa `-f` en manual) y lo pasa como argumento.
 * En modo automático (`-m a`) itera sobre todas las `KEYS` y valores de `P_LIST`.
 * En modo manual (`-m m`) ejecuta una sola combinación `-k <key>` y `-p <p>`.
 * Ejecuta con `mpirun -np <p> <bin>`.

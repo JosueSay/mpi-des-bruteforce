@@ -1,3 +1,1 @@
-implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
-altA,500000,1,1,0.172632264,500001,1,0,2025-10-29T06:06:29Z,myhost,"CLAVE","texto con CLAVE
-"
+implementation,mode,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text,out_bin
