@@ -13,9 +13,7 @@
 
   Retornan `0` si la operación fue correcta y asignan búfer de salida.
 
-> Si se compila con `-DUSE_OPENSSL -lcrypto` se utiliza DES real; si no, hay **XOR de prueba** ( *toy cipher* ) para que puedas medir *speedup* aunque la librería no esté disponible.
-
-### 1.2 Detección de texto válido
+> 1.2 Detección de texto válido
 
 * Se busca una **frase** dentro del texto plano descifrado:
   * `containsPhrase(dec, dec_len, phrase)` → `1` si la contiene, `0` en caso contrario.
