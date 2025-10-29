@@ -1,3 +1,0 @@
-implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
-impl2,500000,1,1,0.000001924,33,1,0,2025-10-29T05:46:53Z,myhost,"secreta","este texto tiene la palabra secreta
-"
