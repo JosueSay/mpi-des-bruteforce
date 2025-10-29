@@ -6,256 +6,17 @@
 #include <sys/stat.h>
 
 #include "../include/common.h"
-#include "../include/impl1.h"
+#include "../include/core_utils.h"
+#include "../include/core_crypto.h"
 
-#ifdef USE_OPENSSL
-#include <openssl/des.h>
-#endif
-
-// lee todo stdin en buffer (malloc)
-static unsigned char *readAllStdin(size_t *out_len)
-{
-  size_t cap = 4096, len = 0;
-  unsigned char *buf = (unsigned char *)malloc(cap);
-  if (!buf)
-    return NULL;
-  for (;;)
-  {
-    size_t n = fread(buf + len, 1, cap - len, stdin);
-    len += n;
-    if (n == 0)
-      break;
-    if (len == cap)
-    {
-      cap *= 2;
-      unsigned char *t = (unsigned char *)realloc(buf, cap);
-      if (!t)
-      {
-        free(buf);
-        return NULL;
-      }
-      buf = t;
-    }
-  }
-  *out_len = len;
-  return buf;
-}
-
-// malloc con exit si falla
-static void *xmalloc(size_t n)
-{
-  void *p = malloc(n);
-  if (!p)
-  {
-    fprintf(stderr, "oom\n");
-    exit(1);
-  }
-  return p;
-}
-
-// convierte string a versión segura para CSV (duplica " y reemplaza \r/\n por espacio)
-static char *csvSanitize(const unsigned char *in, size_t len)
-{
-  size_t extra = 0;
-  for (size_t i = 0; i < len; ++i)
-    if (in[i] == '"')
-      ++extra;
-  char *out = (char *)xmalloc(len + extra + 1);
-  size_t j = 0;
-  for (size_t i = 0; i < len; ++i)
-  {
-    unsigned char c = in[i];
-    if (c == '"')
-    {
-      out[j++] = '"';
-      out[j++] = '"';
-    }
-    else if (c == '\n' || c == '\r')
-    {
-      out[j++] = ' ';
-    }
-    else
-    {
-      out[j++] = (char)c;
-    }
-  }
-  out[j] = '\0';
-  return out;
-}
-
-#ifdef USE_OPENSSL
-static void makeKeyFrom56(uint64_t key56, DES_cblock *k)
-{
-  memset(k, 0, sizeof(DES_cblock));
-  for (int i = 0; i < 8; ++i)
-  {
-    uint8_t seven = (uint8_t)((key56 >> (56 - 7 * (i + 1))) & 0x7Fu);
-    (*k)[i] = (unsigned char)(seven << 1);
-  }
-  DES_set_odd_parity(k);
-}
-#endif
-
-// padding pkcs7-like a múltiplos de 8
-static unsigned char *padBlock8(const unsigned char *in, size_t len, size_t *out_len)
-{
-  size_t pad = 8 - (len % 8);
-  if (pad == 0)
-    pad = 8;
-  *out_len = len + pad;
-  unsigned char *out = (unsigned char *)xmalloc(*out_len);
-  memcpy(out, in, len);
-  memset(out + len, (int)pad, pad);
-  return out;
-}
-
-static unsigned char *unpadBlock8(const unsigned char *in, size_t len, size_t *out_len)
-{
-  if (len == 0)
-  {
-    *out_len = 0;
-    return NULL;
-  }
-  unsigned char pad = in[len - 1];
-  size_t cut = (pad >= 1 && pad <= 8 && pad <= len) ? (len - pad) : len;
-  unsigned char *out = (unsigned char *)xmalloc(cut ? cut : 1);
-  if (cut)
-    memcpy(out, in, cut);
-  *out_len = cut;
-  return out;
-}
-
-// cifrado DES-ECB (o fallback xor)
-int encryptDesEcb(uint64_t key56, const unsigned char *in, size_t len,
-                  unsigned char **out, size_t *out_len)
-{
-#ifdef USE_OPENSSL
-  size_t p_len;
-  unsigned char *p = padBlock8(in, len, &p_len);
-  *out = (unsigned char *)xmalloc(p_len);
-  *out_len = p_len;
-
-  DES_cblock k;
-  DES_key_schedule ks;
-  makeKeyFrom56(key56, &k);
-  DES_set_key_unchecked(&k, &ks);
-
-  for (size_t i = 0; i < p_len; i += 8)
-  {
-    DES_cblock ib, ob;
-    memcpy(ib, p + i, 8);
-    DES_ecb_encrypt(&ib, &ob, &ks, DES_ENCRYPT);
-    memcpy(*out + i, ob, 8);
-  }
-  free(p);
-  return 0;
-#else
-  size_t p_len;
-  unsigned char *p = padBlock8(in, len, &p_len);
-  *out = (unsigned char *)xmalloc(p_len);
-  *out_len = p_len;
-  unsigned char b = (unsigned char)(key56 & 0xFFu);
-  for (size_t i = 0; i < p_len; ++i)
-    (*out)[i] = p[i] ^ b;
-  free(p);
-  return 0;
-#endif
-}
-
-// descifrado DES-ECB (o fallback xor)
-int decryptDesEcb(uint64_t key56, const unsigned char *in, size_t len,
-                  unsigned char **out, size_t *out_len)
-{
-#ifdef USE_OPENSSL
-  if (len % 8 != 0)
-    return -1;
-  unsigned char *tmp = (unsigned char *)xmalloc(len);
-
-  DES_cblock k;
-  DES_key_schedule ks;
-  makeKeyFrom56(key56, &k);
-  DES_set_key_unchecked(&k, &ks);
-
-  for (size_t i = 0; i < len; i += 8)
-  {
-    DES_cblock ib, ob;
-    memcpy(ib, in + i, 8);
-    DES_ecb_encrypt(&ib, &ob, &ks, DES_DECRYPT);
-    memcpy(tmp + i, ob, 8);
-  }
-  unsigned char *unp;
-  size_t unp_len;
-  unp = unpadBlock8(tmp, len, &unp_len);
-  free(tmp);
-  *out = unp;
-  *out_len = unp_len;
-  return 0;
-#else
-  unsigned char *tmp = (unsigned char *)xmalloc(len);
-  unsigned char b = (unsigned char)(key56 & 0xFFu);
-  for (size_t i = 0; i < len; ++i)
-    tmp[i] = in[i] ^ b;
-  *out = tmp;
-  *out_len = len;
-  return 0;
-#endif
-}
-
-// busca substring en buffer descifrado
-int containsPhrase(const unsigned char *buf, size_t len, const char *phrase)
-{
-  if (!phrase || !*phrase)
-    return 0;
-  (void)len;
-  const char *p = (const char *)buf;
-  return strstr(p, phrase) != NULL;
-}
-
-// escribe buffer en archivo (binario)
-static int writeFile(const char *path, const unsigned char *buf, size_t len)
-{
-  FILE *f = fopen(path, "wb");
-  if (!f)
-    return -1;
-  size_t w = fwrite(buf, 1, len, f);
-  fclose(f);
-  return (w == len) ? 0 : -1;
-}
-
-// lee archivo binario completo (malloc)
-static unsigned char *readFile(const char *path, size_t *out_len)
-{
-  FILE *f = fopen(path, "rb");
-  if (!f)
-    return NULL;
-  fseek(f, 0, SEEK_END);
-  long s = ftell(f);
-  fseek(f, 0, SEEK_SET);
-  if (s <= 0)
-  {
-    fclose(f);
-    *out_len = 0;
-    return NULL;
-  }
-  unsigned char *buf = (unsigned char *)xmalloc((size_t)s);
-  size_t r = fread(buf, 1, (size_t)s, f);
-  fclose(f);
-  if (r != (size_t)s)
-  {
-    free(buf);
-    return NULL;
-  }
-  *out_len = (size_t)s;
-  return buf;
-}
-
+// uso
 static void printUsage(const char *prog)
 {
   fprintf(stderr, "uso:\n");
   fprintf(stderr, "  encrypt: echo \"<texto>\" | %s encrypt <key> <out_bin> <csv> <hostname>\n", prog);
   fprintf(stderr, "  decrypt: %s decrypt \"<frase>\" <key_upper> <p> <csv> <hostname> <in_bin>\n", prog);
-  fprintf(stderr, "ejemplo encrypt:\n  echo \"Esta es una prueba\" | %s encrypt 123456 cipher.bin data/impl1/sec.csv myhost\n", prog);
-  fprintf(stderr, "ejemplo decrypt:\n  %s decrypt \"es una prueba\" 123456 1 data/impl1/sec.csv myhost cipher.bin\n", prog);
+  fprintf(stderr, "ejemplo encrypt:\n  echo \"Esta es una prueba\" | %s encrypt 123456 IO/outputs/cipher.bin data/impl1/sec.csv myhost\n", prog);
+  fprintf(stderr, "ejemplo decrypt:\n  %s decrypt \"es una prueba\" 2000000 1 data/impl1/sec.csv myhost IO/outputs/cipher.bin\n", prog);
 }
 
 int main(int argc, char **argv)
@@ -267,7 +28,7 @@ int main(int argc, char **argv)
   }
   const char *mode = argv[1];
 
-  // ---------- encrypt ----------
+  // encrypt
   if (strcmp(mode, "encrypt") == 0)
   {
     if (argc < 6)
@@ -315,7 +76,6 @@ int main(int argc, char **argv)
       return 6;
     }
 
-    // CSV: registramos el texto plano (sanitizado); phrase vacío
     FILE *fp = fopen(csv_path, "a+");
     if (!fp)
     {
@@ -331,10 +91,7 @@ int main(int argc, char **argv)
               "impl1,encrypt,%llu,0,1,%.9f,0,0,0,%s,%s,\"\",\"%s\",%s\n",
               (unsigned long long)key_true,
               dt.secs,
-              ts,
-              hostname,
-              plain_csv,
-              out_bin);
+              ts, hostname, plain_csv, out_bin);
       free(plain_csv);
       fclose(fp);
     }
@@ -344,7 +101,7 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  // ---------- decrypt (alias: brute para compat) ----------
+  // decrypt
   if (strcmp(mode, "decrypt") == 0 || strcmp(mode, "brute") == 0)
   {
     if (argc < 8)
@@ -354,7 +111,7 @@ int main(int argc, char **argv)
     }
     const char *frase = argv[2];
     uint64_t key_upper = strtoull(argv[3], NULL, 10);
-    int p = atoi(argv[4]);
+    int p = atoi(argv[4]); // solo para registro en csv
     const char *csv_path = argv[5];
     const char *hostname = argv[6];
     const char *in_bin = argv[7];
@@ -411,7 +168,6 @@ int main(int argc, char **argv)
       ensureHeader(fp, CSV_HEADER);
       char ts[32];
       isoUtcNow(ts, sizeof ts);
-      // phrase con comillas, text vacío; mode siempre "decrypt"
       fprintf(fp,
               "impl1,decrypt,%llu,%d,1,%.9f,%llu,%d,%d,%s,%s,\"%s\",\"\",%s\n",
               (unsigned long long)key_upper,
@@ -420,10 +176,7 @@ int main(int argc, char **argv)
               (unsigned long long)iterations_done,
               found,
               0,
-              ts,
-              hostname,
-              frase,
-              in_bin);
+              ts, hostname, frase, in_bin);
       fclose(fp);
     }
 
