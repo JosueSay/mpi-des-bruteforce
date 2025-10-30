@@ -190,7 +190,7 @@ $$
 - La **variabilidad** del punto de hallazgo domina el *speedup*; conviene promediar resultados.
 - Con *chunks* mayores y menos sincronización, el **escalamiento** mejora para grandes espacios de claves.
 
-## 11. Referencias (formato APA)
+## 11. Referencias
 
 - FIPS PUB 46-3. (1999). *Data Encryption Standard (DES)* (Withdrawn). NIST. [https://csrc.nist.gov/publications/detail/fips/46-3/archive/1999-10-25](https://csrc.nist.gov/publications/detail/fips/46-3/archive/1999-10-25)
 - Open MPI Team. (s. f.). *Open MPI Documentation*. [https://www.open-mpi.org/doc/](https://www.open-mpi.org/doc/)
