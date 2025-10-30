@@ -16,5 +16,3 @@
 - Gropp, D., Thakur, R., & Gropp, W. (2014). *Using MPI: Portable Programming with the Message Passing Interface*. MIT Press. ISBN: 978-0262527392.
 - MPICH Team. (s. f.). *Master/Worker Pattern in MPI*. MPICH Documentation. Recuperado de [https://www.mpich.org/documentation/](https://www.mpich.org/documentation/)  
 - Rabenseifner, R. (2020). *Hybrid MPI + OpenMP Programming* (Tutorial). HLRS, Stuttgart. Recuperado de [https://fs.hlrs.de/projects/par/mpi/](https://fs.hlrs.de/projects/par/mpi/)
-
-

@@ -135,7 +135,6 @@ Utilizar el parámetro `-?` en los `.sh` para saber sobre los parámetros dispon
 ## 💻 Comandos utilizados
 
 ```bash
-
 # Cifrar
 ./scripts/encr_seq.sh -i impl1 -h myhost -k 123456
 
