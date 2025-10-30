@@ -340,9 +340,3 @@ La técnica es reconocida como una mejora **práctica y teórica** ante el repar
 
 La implementación Master–Worker **maximiza el grado de paralelismo efectivo**, mitigando la aleatoriedad del naive y permitiendo una **evaluación consistente y objetiva del speedup**.
 Este acercamiento representa un diseño **más escalable, más justo entre procesos**, y orientado al rendimiento en entornos distribuidos como MPI.
-
-## Pruebas con llaves fáciles, medianas y difíciles
-<!-- Presentar y comparar los resultados obtenidos (tiempos o speedups). -->
-
-## Comparación general
-<!-- Comparar tiempos entre el enfoque naive y los propuestos. -->
