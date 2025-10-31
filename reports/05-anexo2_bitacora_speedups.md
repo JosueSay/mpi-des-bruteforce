@@ -23,7 +23,7 @@ Se realizaron pruebas de descifrado secuencial y paralelo sobre distintos hosts,
   Se utilizó la implementación `impl1` secuencial como **baseline** y se comparó contra todas las implementaciones paralelas (`impl1`, `impl2`, `impl3`).
   Este enfoque permite evaluar el rendimiento relativo de distintas implementaciones paralelas frente a un descifrado secuencial de referencia.
 
-## Bitácora de ejecución (actualizada)
+## Bitácora de ejecución
 
 ### Enfoque A — `laptop_josue`
 
@@ -149,6 +149,26 @@ El propósito de esta separación fue verificar la consistencia del rendimiento 
 
 - **`pc_josue`**: se consideró el **host principal de referencia**, por ofrecer resultados estables y representativos del comportamiento real de las implementaciones.
 - **`laptop_josue`**: permitió observar la respuesta de los algoritmos en un entorno con recursos más limitados, útil para verificar portabilidad.
+
+## Evidencia de pruebas ejecutadas
+
+Las imágnes completas se encuentran en el repositorio en el siguiente [enlace](https://github.com/JosueSay/mpi-des-bruteforce/tree/main/images/evidencia/capturas). En este archivo se adjuntna las pruebas del host principal:
+
+![Ejecución de pruebas 1](../images/evidencia/capturas/pc_josue/1.png)
+![Ejecución de pruebas 2](../images/evidencia/capturas/pc_josue/2.png)
+![Ejecución de pruebas 3](../images/evidencia/capturas/pc_josue/3.png)
+![Ejecución de pruebas 4](../images/evidencia/capturas/pc_josue/4.png)
+![Ejecución de pruebas 5](../images/evidencia/capturas/pc_josue/5.png)
+![Ejecución de pruebas 6](../images/evidencia/capturas/pc_josue/6.png)
+![Ejecución de pruebas 7](../images/evidencia/capturas/pc_josue/7.png)
+![Ejecución de pruebas 8](../images/evidencia/capturas/pc_josue/8.png)
+![Ejecución de pruebas 9](../images/evidencia/capturas/pc_josue/9.png)
+![Ejecución de pruebas 10](../images/evidencia/capturas/pc_josue/10.png)
+![Ejecución de pruebas 11](../images/evidencia/capturas/pc_josue/11.png)
+![Ejecución de pruebas 12](../images/evidencia/capturas/pc_josue/12.png)
+![Ejecución de pruebas 13](../images/evidencia/capturas/pc_josue/13.png)
+![Ejecución de pruebas 14](../images/evidencia/capturas/pc_josue/14.png)
+![Ejecución de pruebas 15](../images/evidencia/capturas/pc_josue/15.png)
 
 ## Relevancia de gráficas
 

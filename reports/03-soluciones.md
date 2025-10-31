@@ -340,3 +340,36 @@ La técnica es reconocida como una mejora **práctica y teórica** ante el repar
 
 La implementación Master–Worker **maximiza el grado de paralelismo efectivo**, mitigando la aleatoriedad del naive y permitiendo una **evaluación consistente y objetiva del speedup**.
 Este acercamiento representa un diseño **más escalable, más justo entre procesos**, y orientado al rendimiento en entornos distribuidos como MPI.
+
+## Pruebas con llaves fáciles, medianas y difíciles
+
+**Llaves evaluadas:** `123456`, `18014398509481983`, `72057594037927935`.
+
+## Comparación general
+
+- **Baseline (naive) = `impl1` secuencial.**
+- **Paralelo vs. baseline:** todas las paralelas reducen $T_p$ frente a $T_s$; la magnitud depende de la implementación y la llave.
+- **Por implementación:**
+  - **impl2**: la **más consistente y eficiente** en ambos hosts; *S* altos y **eficiencia** cercana a 0.85–0.90 a p altos en `pc_josue`.
+  - **impl1**: **sólida y estable**; en `laptop_josue` puede mostrar **superlinealidad** (E>1) con `123456`, pero cae en la llave difícil.
+  - **impl3**: **paralelismo funcional pero limitado** (eficiencia ≈0.5) y mayor variabilidad según la llave/host.
+- **Por host:**
+
+  - **`pc_josue`** (más capaz): escalado regular, **sin superlinealidad**; *impl2* domina en consistencia.
+  - **`laptop_josue`** (menos capaz): casos de **superlinealidad** con *impl1* en `123456`; sensibilidad mayor a la llave (sobre todo la difícil).
+
+## Síntesis de resultados a p = 4
+
+- **`pc_josue` (p=4):**
+
+  - *impl1*: *S*≈2.80 (`123456`), 3.48 (`180143…`), 3.13 (`720575…`).
+  - *impl2*: **más consistente**: *S*≈3.59 (`123456`), 3.62 (`180143…`), 3.59 (`720575…`).
+  - *impl3*: *S*≈1.99 (`123456`) —sin registros p=4 para las otras llaves en este host—.
+  - **Conclusión p=4:** *impl2* es la **opción más estable** entre llaves; *impl1* es correcta; *impl3* queda atrás.
+
+- **`laptop_josue` (p=4):**
+
+  - *impl1*: **muy alto con la fácil** *S*≈6.44 (`123456`), **bueno** 4.95 (`180143…`), **bajo** 1.88 (`720575…`).
+  - *impl2*: **equilibrado**: *S*≈2.78 (`123456`), 4.47 (`180143…`), 3.30 (`720575…`).
+  - *impl3*: *S*≈4.29 (`123456`) —sin registros p=4 para las otras llaves en este host—.
+  - **Conclusión p=4:** *impl1* puede brillar en la **llave fácil** (incluso superlineal), pero **se degrada** en la difícil; *impl2* ofrece el **mejor balance** entre llaves; *impl3* es aceptable solo en escenarios puntuales.
