@@ -6,4 +6,5 @@ impl1,decrypt,18014398509481983,1,1,0.044884759,123457,1,0,2025-10-29T18:34:40Z,
 impl1,decrypt,72057594037927935,1,1,0.049464369,123457,1,0,2025-10-31T19:50:27Z,pc_josue,"es una prueba de","",/mnt/d/repositorios/UVG/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T183433Z_10378.bin
 impl1,decrypt,123456,1,1,0.206254093,123457,1,0,2025-10-29T18:17:33Z,laptop_josue,"es una prueba de","",/mnt/d/UVG GitHub Repositorios/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T181722Z_24790.bin
 impl1,decrypt,18014398509481983,1,1,0.130562093,123457,1,0,2025-10-29T18:17:41Z,laptop_josue,"es una prueba de","",/mnt/d/UVG GitHub Repositorios/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T181722Z_24790.bin
-impl1,decrypt,18014398509481984,1,1,0.092060293,123457,1,0,2025-10-29T18:17:50Z,laptop_josue,"es una prueba de","",/mnt/d/UVG GitHub Repositorios/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T181722Z_24790.bin
+impl1,decrypt,72057594037927935,1,1,0.097935114,123457,1,0,2025-10-31T19:59:15Z,laptop_josue,"es una prueba de","",/mnt/d/UVG GitHub Repositorios/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T181722Z_24790.bin
+
