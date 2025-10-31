@@ -142,66 +142,66 @@ Utilizar el parámetro `-?` en los `.sh` para saber sobre los parámetros dispon
 # Descifrado secuencial - implementación 1
 ./scripts/des_seq.sh -i impl1 -h myhost -K 123456
 ./scripts/des_seq.sh -i impl1 -h myhost -K 18014398509481983
-./scripts/des_seq.sh -i impl1 -h myhost -K 18014398509481984
+./scripts/des_seq.sh -i impl1 -h myhost -K 72057594037927935
 
 
 # Descifrado secuencial - implementación 2
 
 ./scripts/des_seq.sh -i impl2 -h myhost -K 123456
 ./scripts/des_seq.sh -i impl2 -h myhost -K 18014398509481983
-./scripts/des_seq.sh -i impl2 -h myhost -K 18014398509481984
+./scripts/des_seq.sh -i impl2 -h myhost -K 72057594037927935
 
 # Descifrado secuencial - implementación 3
 
 ./scripts/des_seq.sh -i impl3 -h myhost -K 123456
 ./scripts/des_seq.sh -i impl3 -h myhost -K 18014398509481983
-./scripts/des_seq.sh -i impl3 -h myhost -K 18014398509481984
+./scripts/des_seq.sh -i impl3 -h myhost -K 72057594037927935
 
 
 # Descifrado paralelo - implementación 1
 
 ./scripts/des_par.sh -i impl1 -h myhost -n 2 -K 123456
 ./scripts/des_par.sh -i impl1 -h myhost -n 2 -K 18014398509481983
-./scripts/des_par.sh -i impl1 -h myhost -n 2 -K 18014398509481984
+./scripts/des_par.sh -i impl1 -h myhost -n 2 -K 72057594037927935
 
 
 ./scripts/des_par.sh -i impl1 -h myhost -n 4 -K 123456
 ./scripts/des_par.sh -i impl1 -h myhost -n 4 -K 18014398509481983
-./scripts/des_par.sh -i impl1 -h myhost -n 4 -K 18014398509481984
+./scripts/des_par.sh -i impl1 -h myhost -n 4 -K 72057594037927935
 
 ./scripts/des_par.sh -i impl1 -h myhost -n 8 -K 123456
 ./scripts/des_par.sh -i impl1 -h myhost -n 8 -K 18014398509481983
-./scripts/des_par.sh -i impl1 -h myhost -n 8 -K 18014398509481984
+./scripts/des_par.sh -i impl1 -h myhost -n 8 -K 72057594037927935
 
 
 # Descifrado paralelo - implementación 2
 
 ./scripts/des_par.sh -i impl2 -h myhost -n 2 -K 123456
 ./scripts/des_par.sh -i impl2 -h myhost -n 2 -K 18014398509481983
-./scripts/des_par.sh -i impl2 -h myhost -n 2 -K 18014398509481984
+./scripts/des_par.sh -i impl2 -h myhost -n 2 -K 72057594037927935
 
 ./scripts/des_par.sh -i impl2 -h myhost -n 4 -K 123456
 ./scripts/des_par.sh -i impl2 -h myhost -n 4 -K 18014398509481983
-./scripts/des_par.sh -i impl2 -h myhost -n 4 -K 18014398509481984
+./scripts/des_par.sh -i impl2 -h myhost -n 4 -K 72057594037927935
 
 ./scripts/des_par.sh -i impl2 -h myhost -n 8 -K 123456
 ./scripts/des_par.sh -i impl2 -h myhost -n 8 -K 18014398509481983
-./scripts/des_par.sh -i impl2 -h myhost -n 8 -K 18014398509481984
+./scripts/des_par.sh -i impl2 -h myhost -n 8 -K 72057594037927935
 
 # Descifrado paralelo - implementación 3
 
 ./scripts/des_par.sh -i impl3 -h myhost -n 2 -K 123456
 ./scripts/des_par.sh -i impl3 -h myhost -n 2 -K 18014398509481983
-./scripts/des_par.sh -i impl3 -h myhost -n 2 -K 18014398509481984
+./scripts/des_par.sh -i impl3 -h myhost -n 2 -K 72057594037927935
 
 
 ./scripts/des_par.sh -i impl3 -h myhost -n 4 -K 123456
 ./scripts/des_par.sh -i impl3 -h myhost -n 4 -K 18014398509481983
-./scripts/des_par.sh -i impl3 -h myhost -n 4 -K 18014398509481984
+./scripts/des_par.sh -i impl3 -h myhost -n 4 -K 72057594037927935
 
 ./scripts/des_par.sh -i impl3 -h myhost -n 8 -K 123456
 ./scripts/des_par.sh -i impl3 -h myhost -n 8 -K 18014398509481983
-./scripts/des_par.sh -i impl3 -h myhost -n 8 -K 18014398509481984
+./scripts/des_par.sh -i impl3 -h myhost -n 8 -K 72057594037927935
 ```
 
 ## 📊 Salida (CSV)

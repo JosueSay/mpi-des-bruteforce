@@ -1,7 +1,7 @@
 implementation,mode,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text,out_bin
 impl3,decrypt,123456,2,1,0.045772448,123457,1,1,2025-10-29T18:36:05Z,pc_josue,"es una prueba de","",/mnt/d/repositorios/UVG/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T183433Z_10378.bin
 impl3,decrypt,18014398509481983,2,1,0.045447363,123457,1,1,2025-10-29T18:36:13Z,pc_josue,"es una prueba de","",/mnt/d/repositorios/UVG/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T183433Z_10378.bin
-impl3,decrypt,18014398509481984,2,1,0.044773054,123457,1,1,2025-10-29T18:36:16Z,pc_josue,"es una prueba de","",/mnt/d/repositorios/UVG/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T183433Z_10378.bin
+impl3,decrypt,72057594037927935,2,1,0.048665961,123457,1,1,2025-10-31T19:51:04Z,pc_josue,"es una prueba de","",/mnt/d/repositorios/UVG/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T183433Z_10378.bin
 impl3,decrypt,123456,4,1,0.022509118,123457,1,1,2025-10-29T18:36:19Z,pc_josue,"es una prueba de","",/mnt/d/repositorios/UVG/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T183433Z_10378.bin
 impl3,decrypt,123456,8,1,0.011187167,123457,1,4,2025-10-29T18:36:23Z,pc_josue,"es una prueba de","",/mnt/d/repositorios/UVG/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T183433Z_10378.bin
 impl3,decrypt,123456,2,1,0.103964613,123457,1,1,2025-10-29T18:21:53Z,laptop_josue,"es una prueba de","",/mnt/d/UVG GitHub Repositorios/2025/mpi-des-bruteforce/scripts/../IO/outputs/cipher_20251029T181722Z_24790.bin
