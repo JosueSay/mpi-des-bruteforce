@@ -578,7 +578,7 @@ El enfoque Master–Worker introduce:
 | **Master (rank 0)**     | Administra el puntero global de trabajo (`next_chunk`) y envía trabajo a los workers |
 | **Workers (ranks > 0)** | Solicitan chunks, prueban llaves y notifican éxito                                   |
 
-Todos los procesos permanecen **ocupados** hasta que **alguien encuentra la llave** ✅
+Todos los procesos permanecen **ocupados** hasta que **alguien encuentra la llave**
 
 ### Conceptos clave del modelo
 

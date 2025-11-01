@@ -405,7 +405,7 @@ La tendencia confirma que todas las implementaciones se benefician del increment
 
 El *speedup* ($S = T_s / T_p$) refleja la ganancia relativa de rendimiento respecto a la ejecución secuencial.
 
-- **impl2** alcanza *speedups* de **2.60× a 2.77×** en la clave `123456`, manteniendo eficiencia cercana al ideal ($E ≈ 1.0$).
+- **impl2** alcanza *speedups* de **2.60× a 2.77×** en la clave `123456`, manteniendo eficiencia cercana al ideal ($E \approx 1.0$).
   Sin embargo, en la clave `18014398509481983`, el *speedup* varía desde **0.85× (p=2)** hasta **4.47× (p=4)**, indicando irregularidad entre ejecuciones.
 - **impl3** obtiene *speedups* de **1.18× (p=2)** y **4.28× (p=4)**, inferiores a los de **impl2**, pero más estables entre claves.
 - **impl1** mantiene un crecimiento progresivo, sirviendo como baseline de referencia y mostrando estabilidad en todos los puntos.
