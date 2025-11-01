@@ -7,6 +7,10 @@
     implementation,key,p,repetition,time_seconds,iterations_done,found,finder_rank,timestamp,hostname,phrase,text
   - 'implementation' = altA, p=1, repetition=1
   - DES real si se compila con -DUSE_OPENSSL -lcrypto; si no, XOR fallback.
+
+  NOTA (opcional, ya incluido más abajo y comentado):
+  - Puedes imprimir la llave encontrada y una vista previa del texto descifrado
+    descomentando el bloque marcado como "OPCIONAL".
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -134,6 +138,24 @@ int main(int argc, char **argv)
         {
           found = 1;
           found_key = k;
+
+          /* --------------- OPCIONAL: imprimir llave y texto descifrado ---------------
+             Descomenta este bloque si Wicho quiere ver la llave y un preview del texto.
+             OJO: 'dec' puede contener bytes no imprimibles; por eso usamos un preview.
+
+          // printf("[OK][SEQ] key = %llu (0x%llX)\n",
+          //        (unsigned long long)found_key, (unsigned long long)found_key);
+
+          // {
+          //   size_t tocopy = dec_len < 256 ? dec_len : 255;  // límite de preview
+          //   unsigned char preview[256];
+          //   memcpy(preview, dec, tocopy);
+          //   preview[tocopy] = '\0';
+          //   printf("[OK][SEQ] plaintext_preview(len=%zu) = \"%s\"\n",
+          //          dec_len, (char*)preview);
+          // }
+          --------------------------------------------------------------------------- */
+
           free(dec);
           break;
         }

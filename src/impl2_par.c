@@ -223,6 +223,23 @@ int main(int argc, char **argv)
             found = 1;
             found_key = k;
             winner_rank = rank;
+
+            /* --------------- OPCIONAL: imprimir llave y texto descifrado ---------------
+               Descomenta este bloque si quieren ver la llave y un preview del texto.
+               IMPORTANTE: Imprime SOLO el rank ganador para evitar duplicados.
+
+            // if (rank == winner_rank) {
+            //   printf("[OK][PAR] key = %llu (0x%llX) rank = %d\n",
+            //          (unsigned long long)found_key, (unsigned long long)found_key, rank);
+            //   size_t tocopy = dec_len < 256 ? dec_len : 255;  // límite de preview
+            //   unsigned char preview[256];
+            //   memcpy(preview, dec, tocopy);
+            //   preview[tocopy] = '\0';
+            //   printf("[OK][PAR] plaintext_preview(len=%zu) = \"%s\"\n",
+            //          dec_len, (char*)preview);
+            // }
+            --------------------------------------------------------------------------- */
+
             free(dec);
             for (int r = 0; r < size; ++r)
             {
