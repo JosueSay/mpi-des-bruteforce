@@ -38,6 +38,8 @@
 Se diseñaron versiones secuenciales y paralelas del programa, se propusieron tres estrategias de paralelización (impl1, impl2 e impl3), y se analizaron sus resultados en distintos entornos de hardware.
 El trabajo incluye fundamentos teóricos, descripción técnica de los acercamientos, comparación de speedups, análisis de eficiencia, discusión sobre la superlinealidad observada y conclusiones basadas en mediciones experimentales reproducibles.
 
+- [Enlace a repositorio](https://github.com/JosueSay/mpi-des-bruteforce)
+
 # Antecedentes
 
 ## DES — Data Encryption Standard
